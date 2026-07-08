@@ -78,6 +78,7 @@ export interface Settings {
   working_hours_start: string;
   working_hours_end: string;
   theme: "system" | "light" | "dark";
+  desktop_notifications: boolean;
 }
 
 export interface DashboardStats {

@@ -9,6 +9,7 @@ pub struct Settings {
     pub working_hours_start: String,
     pub working_hours_end: String,
     pub theme: String, // "system", "light", "dark"
+    pub desktop_notifications: bool,
     pub created_at: String,
     pub updated_at: String,
 }

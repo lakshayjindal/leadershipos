@@ -368,7 +368,7 @@ pub fn get_reflection_by_session(conn: &Connection, session_id: &str) -> Result<
 
 pub fn get_settings(conn: &Connection) -> Result<Settings> {
     let mut stmt = conn.prepare(
-        "SELECT id, obsidian_vault_path, reminder_interval_minutes, default_task_duration_minutes, working_hours_start, working_hours_end, theme, created_at, updated_at
+        "SELECT id, obsidian_vault_path, reminder_interval_minutes, default_task_duration_minutes, working_hours_start, working_hours_end, theme, desktop_notifications, created_at, updated_at
          FROM settings LIMIT 1"
     )?;
     let result = stmt.query_row([], |row| {
@@ -380,8 +380,9 @@ pub fn get_settings(conn: &Connection) -> Result<Settings> {
             working_hours_start: row.get(4)?,
             working_hours_end: row.get(5)?,
             theme: row.get(6)?,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
+            desktop_notifications: row.get::<_, i32>(7)? != 0,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
         })
     });
 
@@ -391,8 +392,8 @@ pub fn get_settings(conn: &Connection) -> Result<Settings> {
             let id = Uuid::new_v4().to_string();
             let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
             conn.execute(
-                "INSERT INTO settings (id, obsidian_vault_path, reminder_interval_minutes, default_task_duration_minutes, working_hours_start, working_hours_end, theme, created_at, updated_at)
-                 VALUES (?1, '~/Documents/obsidian/days', 5, 30, '09:00', '17:00', 'system', ?2, ?3)",
+                "INSERT INTO settings (id, obsidian_vault_path, reminder_interval_minutes, default_task_duration_minutes, working_hours_start, working_hours_end, theme, desktop_notifications, created_at, updated_at)
+                 VALUES (?1, '~/Documents/obsidian/days', 5, 30, '09:00', '17:00', 'system', 1, ?2, ?3)",
                 params![id, now, now],
             )?;
             Ok(Settings {
@@ -403,6 +404,7 @@ pub fn get_settings(conn: &Connection) -> Result<Settings> {
                 working_hours_start: "09:00".to_string(),
                 working_hours_end: "17:00".to_string(),
                 theme: "system".to_string(),
+                desktop_notifications: true,
                 created_at: now.clone(),
                 updated_at: now,
             })
@@ -414,8 +416,8 @@ pub fn get_settings(conn: &Connection) -> Result<Settings> {
 pub fn update_settings(conn: &Connection, settings: &Settings) -> Result<()> {
     let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     conn.execute(
-        "UPDATE settings SET obsidian_vault_path = ?1, reminder_interval_minutes = ?2, default_task_duration_minutes = ?3, working_hours_start = ?4, working_hours_end = ?5, theme = ?6, updated_at = ?7 WHERE id = ?8",
-        params![settings.obsidian_vault_path, settings.reminder_interval_minutes, settings.default_task_duration_minutes, settings.working_hours_start, settings.working_hours_end, settings.theme, now, settings.id],
+        "UPDATE settings SET obsidian_vault_path = ?1, reminder_interval_minutes = ?2, default_task_duration_minutes = ?3, working_hours_start = ?4, working_hours_end = ?5, theme = ?6, desktop_notifications = ?7, updated_at = ?8 WHERE id = ?9",
+        params![settings.obsidian_vault_path, settings.reminder_interval_minutes, settings.default_task_duration_minutes, settings.working_hours_start, settings.working_hours_end, settings.theme, settings.desktop_notifications as i32, now, settings.id],
     )?;
     Ok(())
 }

@@ -75,6 +75,7 @@ impl Database {
                 working_hours_start TEXT NOT NULL DEFAULT '09:00',
                 working_hours_end TEXT NOT NULL DEFAULT '17:00',
                 theme TEXT NOT NULL DEFAULT 'system',
+                desktop_notifications INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
                 updated_at TEXT NOT NULL DEFAULT (datetime('now'))
             );
@@ -86,6 +87,13 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date);
             ",
         )?;
+
+        // Migration: add desktop_notifications column if it doesn't exist
+        // SQLite will error if column already exists, so we catch that gracefully
+        let _ = conn.execute(
+            "ALTER TABLE settings ADD COLUMN desktop_notifications INTEGER NOT NULL DEFAULT 1",
+            [],
+        );
 
         Ok(())
     }

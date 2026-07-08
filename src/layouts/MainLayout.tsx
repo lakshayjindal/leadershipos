@@ -1,8 +1,62 @@
-import type { ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useSession } from "../contexts/SessionContext";
+import { MiniTimerBar } from "../components/MiniTimerBar";
+import { QuickAddModal } from "../components/QuickAddPopover";
+import { ToastContainer } from "../components/Toast";
 
 export function MainLayout({ children }: { children: ReactNode }) {
-  const { view, setView } = useSession();
+  const {
+    view,
+    setView,
+    session: currentSession,
+    handleCompleteTask,
+    handleSkipTask,
+    extendTime,
+    stillWorking,
+    handlePauseTask,
+    tasks,
+    activeTaskId,
+    showTimeUp,
+    timeUpTask,
+  } = useSession();
+
+  // ─── Keyboard shortcuts ─────────────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      switch (e.key) {
+        case "n":
+        case "N":
+          if (currentSession) setShowQuickAdd(true);
+          break;
+        case " ":
+          e.preventDefault();
+          if (activeTaskId) handlePauseTask(activeTaskId);
+          break;
+        case "Enter":
+          if (activeTaskId) {
+            const t = tasks.find((t) => t.id === activeTaskId);
+            if (t) handleCompleteTask(t);
+          }
+          break;
+        case "Escape":
+          if (showTimeUp) stillWorking();
+          if (showQuickAdd) setShowQuickAdd(false);
+          break;
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [activeTaskId, tasks, handleCompleteTask, handlePauseTask, showTimeUp, stillWorking, currentSession]);
+
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const isHome =
     view === "welcome" ||
@@ -10,46 +64,152 @@ export function MainLayout({ children }: { children: ReactNode }) {
     view === "commitment" ||
     view === "dashboard";
 
+  const navItems = [
+    {
+      id: "home",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M2 8L8 2l6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M4 6v6h8V6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      label: "Home",
+      active: isHome,
+      action: () => setView("welcome"),
+    },
+    {
+      id: "planning",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+          <path d="M5 6h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          <path d="M5 8.5h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          <path d="M5 11h5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+        </svg>
+      ),
+      label: "Plan",
+      active: view === "planning",
+      action: () => setView("planning"),
+      hidden: !currentSession,
+    },
+    {
+      id: "add-task",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      ),
+      label: "Add task",
+      active: false,
+      action: () => setShowQuickAdd(true),
+      hidden: !currentSession,
+    },
+    { separator: true },
+    {
+      id: "settings",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4"/>
+          <path d="M8 1.5v1M8 13.5v1M14.5 8h-1M2.5 8h-1M12.5 3.5l-.5.5M4 12l-.5.5M12.5 12.5l-.5-.5M4 4l-.5-.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+        </svg>
+      ),
+      label: "Settings",
+      active: view === "settings",
+      action: () => setView("settings"),
+    },
+  ];
+
   return (
-    <div className="h-full flex">
+    <div className="h-full flex bg-[var(--color-bg)]">
       {/* Sidebar */}
-      <nav className="w-12 flex-none flex flex-col items-center py-4 gap-3 border-r border-[var(--color-border)] bg-[var(--color-surface)]">
-        <button
-          onClick={() => setView("welcome")}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 ${
-            isHome
-              ? "bg-[var(--color-primary)] text-white shadow-sm"
-              : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-subtle)]"
-          }`}
-          title="Home"
-        >
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-            <path d="M1.5 7.5L7.5 1.5L13.5 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M3.5 5.5V12.5H11.5V5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
+      <nav className="w-[48px] flex-none flex flex-col items-center py-3 gap-1 border-r border-[var(--color-border)] bg-[var(--color-surface)] z-30">
+        {navItems.map((item, i) => {
+          if ("separator" in item) {
+            return (
+              <div key={`sep-${i}`} className="w-full px-3 py-1.5">
+                <div className="h-px bg-[var(--color-border)]" />
+              </div>
+            );
+          }
+          if (item.hidden) return null;
 
-        {/* Separator */}
-        <div className="w-4 h-px bg-[var(--color-border)]" />
-
-        <button
-          onClick={() => setView("settings")}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 ${
-            view === "settings"
-              ? "bg-[var(--color-primary)] text-white shadow-sm"
-              : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-subtle)]"
-          }`}
-          title="Settings"
-        >
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-            <path d="M7.5 9.5C8.60457 9.5 9.5 8.60457 9.5 7.5C9.5 6.39543 8.60457 5.5 7.5 5.5C6.39543 5.5 5.5 6.39543 5.5 7.5C5.5 8.60457 6.39543 9.5 7.5 9.5Z" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M12.5 7.5C12.5 7.7 12.48 7.88 12.45 8.06L13.82 9.16C13.92 9.24 13.94 9.38 13.86 9.5L12.5 11.5C12.42 11.62 12.28 11.64 12.16 11.56L10.5 10.7C10.16 10.94 9.78 11.14 9.38 11.28L9 13C8.98 13.2 8.86 13.3 8.66 13.3H6.34C6.14 13.3 6.02 13.2 6 13L5.62 11.28C5.22 11.14 4.84 10.94 4.5 10.7L2.84 11.56C2.72 11.64 2.58 11.62 2.5 11.5L1.14 9.5C1.06 9.38 1.08 9.24 1.18 9.16L2.55 8.06C2.52 7.88 2.5 7.7 2.5 7.5C2.5 7.3 2.52 7.12 2.55 6.94L1.18 5.84C1.08 5.76 1.06 5.62 1.14 5.5L2.5 3.5C2.58 3.38 2.72 3.36 2.84 3.44L4.5 4.3C4.84 4.06 5.22 3.86 5.62 3.72L6 2C6.02 1.8 6.14 1.7 6.34 1.7H8.66C8.86 1.7 8.98 1.8 9 2L9.38 3.72C9.78 3.86 10.16 4.06 10.5 4.3L12.16 3.44C12.28 3.36 12.42 3.38 12.5 3.5L13.86 5.5C13.94 5.62 13.92 5.76 13.82 5.84L12.45 6.94C12.48 7.12 12.5 7.3 12.5 7.5Z" stroke="currentColor" strokeWidth="1.5"/>
-          </svg>
-        </button>
+          return (
+            <button
+              key={item.id}
+              onClick={item.action}
+              className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-120 btn-press ${
+                item.active
+                  ? "sidebar-item-active"
+                  : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-subtle)]"
+              }`}
+              title={item.label}
+            >
+              {item.icon}
+            </button>
+          );
+        })}
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 bg-[var(--color-bg)]">{children}</main>
+      <div className="flex-1 min-w-0 flex flex-col">
+        <MiniTimerBar />
+        <main className="flex-1 min-h-0 overflow-hidden page-enter">
+          {children}
+        </main>
+      </div>
+
+      {/* Quick add modal */}
+      <QuickAddModal
+        open={showQuickAdd}
+        onClose={() => setShowQuickAdd(false)}
+      />
+
+      {/* Toast container */}
+      <ToastContainer />
+
+      {/* Time-up Notification Modal */}
+      {showTimeUp && timeUpTask && (
+        <div className="modal-backdrop" style={{ zIndex: 60 }}>
+          <div className="modal-panel p-6">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-9 h-9 rounded-lg bg-[var(--color-warning-subtle)] flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--color-warning)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 1.5L1.5 16.5h15L9 1.5z" />
+                  <path d="M9 7v4" />
+                  <path d="M9 12.5v.5" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Time's up</p>
+                <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5">
+                  {timeUpTask.title}
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 space-y-2">
+              <button
+                onClick={() => { handleCompleteTask(timeUpTask); }}
+                className="btn-primary w-full text-sm"
+              >
+                ✓ Finish
+              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => extendTime(15)} className="btn-secondary text-sm">+15 min</button>
+                <button onClick={() => extendTime(30)} className="btn-secondary text-sm">+30 min</button>
+              </div>
+              <button onClick={stillWorking} className="btn-ghost w-full text-sm">
+                Still working
+              </button>
+              <button
+                onClick={() => { handleSkipTask(timeUpTask); }}
+                className="btn-ghost w-full text-sm text-[var(--color-danger)] hover:bg-[var(--color-danger-subtle)]"
+              >
+                Switch task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
