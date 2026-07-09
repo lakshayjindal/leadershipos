@@ -1,0 +1,49 @@
+leadership-os/
+│
+├── docs/
+│   ├── 00_Vision.md
+│   ├── 01_Product_Principles.md
+│   ├── 02_User_Workflow.md
+│   ├── 03_Feature_Specification.md
+│   ├── 04_System_Architecture.md
+│   ├── 05_Data_Model.md
+│   ├── 06_Task_Lifecycle.md
+│   ├── 07_UI_UX_Guidelines.md
+│   ├── 08_Timer_Engine.md
+│   ├── 09_Notifications.md
+│   ├── 10_Daily_Journal.md
+│   ├── 11_Configuration.md
+│   ├── 12_File_System.md
+│   ├── 13_Keyboard_First_Design.md
+│   ├── 14_Future_Roadmap.md
+│   └── ADR/
+│       ├── 0001-why-local-first.md
+│       ├── 0002-why-tauri.md
+│       ├── 0003-why-markdown.md
+│       └── ...
+
+features/
+├── daily-planner.md
+├── task-management.md
+├── task-priority.md
+├── deadlines.md
+├── focus-timer.md
+├── overlay.md
+├── breaks.md
+├── notifications.md
+├── command-palette.md
+├── search.md
+├── history.md
+├── end-of-day-review.md
+├── journal.md
+├── configuration.md
+├── startup.md
+└── recovery.md
+
+
+15_IMPLEMENTATION_RULES.md
+UI_COMPONENT_LIBRARY.md
+
+ERROR_HANDLING.md
+TESTING_STRATEGY.md
+CODING_STANDARDS.md
