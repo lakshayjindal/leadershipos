@@ -1,0 +1,26 @@
+# ─── Node / Frontend ─────────────────────────────────────
+node_modules/
+dist/
+dist-ssr/
+
+# ─── Rust / Tauri Backend ───────────────────────────────
+src-tauri/target/
+
+# ─── Environment Variables ──────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── OS / Editor ────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.iml
+
+# ─── Logs ───────────────────────────────────────────────
+*.log
+npm-debug.log*
