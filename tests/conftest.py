@@ -68,3 +68,42 @@ def sample_task(db: Database, sample_day: Day) -> Task:
         priority=Priority.HIGH.value,
     )
     return db.create_task(task)
+
+
+# ─── Engine Fixtures ────────────────────────────────────────────────
+
+
+@pytest.fixture
+def task_engine(db: Database, event_bus: EventBus, state: StateManager):
+    """Provide a TaskEngine instance."""
+    from leadership_os.core.task_engine import TaskEngine
+    return TaskEngine(db, event_bus, state)
+
+
+@pytest.fixture
+def timer_engine(db: Database, event_bus: EventBus, state: StateManager):
+    """Provide a TimerEngine instance."""
+    from leadership_os.core.timer_engine import TimerEngine
+    return TimerEngine(db, event_bus, state)
+
+
+@pytest.fixture
+def break_engine(db: Database, event_bus: EventBus, state: StateManager, task_engine):
+    """Provide a BreakEngine instance."""
+    from leadership_os.core.break_engine import BreakEngine
+    return BreakEngine(db, event_bus, state, task_engine)
+
+
+@pytest.fixture
+def recovery_mgr(db: Database, state: StateManager, event_bus: EventBus):
+    """Provide a RecoveryManager instance."""
+    from leadership_os.core.recovery import RecoveryManager
+    return RecoveryManager(db, state, event_bus)
+
+
+@pytest.fixture
+def journal_engine(db: Database, event_bus: EventBus, config: ConfigManager):
+    """Provide a JournalEngine instance."""
+    from leadership_os.core.journal_engine import JournalEngine
+    return JournalEngine(db, event_bus, config)
+

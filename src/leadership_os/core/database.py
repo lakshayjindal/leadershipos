@@ -211,6 +211,13 @@ class Database:
             logger.info("Created day record for %s", today)
             return day
 
+    def get_day(self, day_id: str) -> Day | None:
+        """Get a day record by its ID."""
+        with self._cursor() as cursor:
+            cursor.execute("SELECT * FROM days WHERE id = ?", (day_id,))
+            row = cursor.fetchone()
+            return self._row_to_day(row) if row else None
+
     def get_day_by_date(self, date_str: str) -> Day | None:
         """Get a day record by date string (YYYY-MM-DD)."""
         with self._cursor() as cursor:
@@ -457,6 +464,15 @@ class Database:
             )
             row = cursor.fetchone()
             return self._row_to_break_session(row) if row else None
+
+    def get_breaks_by_day(self, day_id: str) -> list[BreakSession]:
+        """Get all break sessions for a day, ordered by start time."""
+        with self._cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM break_sessions WHERE day_id = ? ORDER BY start_time",
+                (day_id,),
+            )
+            return [self._row_to_break_session(row) for row in cursor.fetchall()]
 
     def end_break(self, break_id: str) -> BreakSession | None:
         """End a running break session."""

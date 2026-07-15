@@ -22,9 +22,9 @@ class TaskStatus(str, Enum):
     def valid_transitions(cls) -> dict["TaskStatus", list["TaskStatus"]]:
         """Return the map of valid state transitions."""
         return {
-            cls.PENDING: [cls.ACTIVE, cls.ARCHIVED, cls.DELETED],
-            cls.ACTIVE: [cls.PAUSED, cls.COMPLETED, cls.ARCHIVED, cls.DELETED],
-            cls.PAUSED: [cls.ACTIVE, cls.COMPLETED, cls.ARCHIVED],
+            cls.PENDING: [cls.ACTIVE, cls.ARCHIVED, cls.DELETED, cls.CARRIED_FORWARD],
+            cls.ACTIVE: [cls.PAUSED, cls.COMPLETED, cls.ARCHIVED, cls.DELETED, cls.CARRIED_FORWARD],
+            cls.PAUSED: [cls.ACTIVE, cls.COMPLETED, cls.ARCHIVED, cls.CARRIED_FORWARD],
             cls.COMPLETED: [],  # Final — becomes 'closed' at day end
             cls.ARCHIVED: [],  # Permanent removal from active planning
             cls.DELETED: [],  # Permanent removal

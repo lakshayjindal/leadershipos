@@ -244,6 +244,7 @@ class Reflection:
             self.accomplishments.strip()
             or self.challenges.strip()
             or self.tomorrow_first.strip()
+            or self.additional_notes.strip()
         )
 
 
