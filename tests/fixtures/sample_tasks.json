@@ -1,0 +1,28 @@
+[
+  {
+    "title": "Implement task engine",
+    "priority": "critical",
+    "status": "pending",
+    "estimated_minutes": 120,
+    "notes": "Core feature - must be done first"
+  },
+  {
+    "title": "Write unit tests",
+    "priority": "high",
+    "status": "pending",
+    "estimated_minutes": 60,
+    "notes": "Test-driven development"
+  },
+  {
+    "title": "Update documentation",
+    "priority": "medium",
+    "status": "pending",
+    "estimated_minutes": 30
+  },
+  {
+    "title": "Refactor utils",
+    "priority": "low",
+    "status": "pending",
+    "estimated_minutes": 45
+  }
+]

@@ -1,0 +1,23 @@
+[work_schedule]
+start_time = "08:00"
+end_time = "17:00"
+lunch_time = "12:00"
+dinner_time = "18:30"
+work_days = ["monday", "tuesday", "wednesday", "thursday", "friday"]
+
+[ui]
+theme = "dark"
+overlay_opacity = 0.9
+show_overlay = true
+
+[journaling]
+vault_path = "~/Documents/Obsidian"
+journal_dir = "Daily Notes"
+
+[notifications]
+enabled = true
+deadline_reminder_minutes = 15
+
+[keyboard]
+create_task = "ctrl+n"
+complete_task = "ctrl+enter"

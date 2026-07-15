@@ -53,3 +53,5 @@ src-tauri/target/
 Thumbs.db
 
 # Sub-project: Tauri implementation
+
+__pycache__
