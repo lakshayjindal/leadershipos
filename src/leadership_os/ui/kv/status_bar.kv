@@ -1,0 +1,46 @@
+# StatusBar — Bottom status bar
+# Redesigned: integrated look, matching colors, consistent spacing
+# KivyMD 2.0 compatible
+
+<StatusBar>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: "26dp"
+    padding: ["16dp", "0dp", "16dp", "0dp"]
+    spacing: "32dp"
+    md_bg_color: 0.051, 0.051, 0.102, 1  # #0D0D1A — match main bg
+
+    canvas.before:
+        Color:
+            rgba: 0.176, 0.176, 0.29, 0.4  # Subtle top border
+        Line:
+            width: 1
+            points: [self.x, self.top - 0.5, self.right, self.top - 0.5]
+
+    # Left: Focus time
+    MDLabel:
+        text: f"Focus {root.focus_time_display}"
+        color: 0.353, 0.353, 0.502, 1  # #5A5A7A
+        font_size: "10sp"
+        size_hint_x: None
+        width: "90dp"
+
+    # Left-center: Completed
+    MDLabel:
+        text: f"Completed {root.completed_display}"
+        color: 0.353, 0.353, 0.502, 1
+        font_size: "10sp"
+        size_hint_x: None
+        width: "100dp"
+
+    # Spacer
+    Widget:
+
+    # Right: Hint
+    MDLabel:
+        text: root.hint_text
+        color: 0.235, 0.235, 0.392, 1  # #3C3C64 — very muted
+        font_size: "10sp"
+        size_hint_x: None
+        width: "90dp"
+        halign: "right"

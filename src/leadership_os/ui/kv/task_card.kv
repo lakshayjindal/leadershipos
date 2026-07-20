@@ -1,0 +1,145 @@
+# TaskCard — Single task display card
+# Grid-aligned: status icon | title + badges row | action icons
+# KivyMD 2.0 compatible
+
+<TaskCard>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: "48dp"
+    padding: 0
+    spacing: 0
+    md_bg_color: 0.102, 0.102, 0.18, 1
+
+    canvas.before:
+        Color:
+            rgba: 0.176, 0.176, 0.29, 0.25
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [8]
+
+    # ── Left accent strip ──────────────────────────────────────────
+    Widget:
+        size_hint_x: None
+        width: "3dp"
+        canvas.before:
+            Color:
+                rgba: root.priority_rgba
+            RoundedRectangle:
+                pos: self.x, self.y + 6
+                size: [3, self.height - 12]
+                radius: [1.5]
+
+    Widget:
+        size_hint_x: None
+        width: "6dp"
+
+    # ── Status icon ────────────────────────────────────────────────
+    MDIconButton:
+        icon: root.status_icon
+        theme_icon_color: "Custom"
+        icon_color: root.status_rgba
+        size_hint_x: None
+        width: "32dp"
+        icon_size: "16sp"
+        pos_hint: {"center_y": 0.5}
+        on_release: root.on_activate() if not root.is_active else root.on_complete()
+
+    Widget:
+        size_hint_x: None
+        width: "4dp"
+
+    # ── Content (vertically centered) ──────────────────────────────
+    BoxLayout:
+        orientation: "vertical"
+        size_hint_x: 1
+        pos_hint: {"center_y": 0.5}
+        padding: ["0dp", "6dp", "0dp", "6dp"]
+        spacing: "2dp"
+
+        # Title
+        MDLabel:
+            text: root.title
+            color: 0.91, 0.91, 0.94, 1
+            font_size: "12sp"
+            bold: root.is_active
+            shorten: True
+            size_hint_y: None
+            height: "18dp"
+
+        # Meta row
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: "16dp"
+            spacing: "6dp"
+
+            # Priority badge (pill)
+            BoxLayout:
+                size_hint_x: None
+                width: "62dp"
+                padding: 0
+                canvas:
+                    Color:
+                        rgba: root.priority_bg_rgba
+                    RoundedRectangle:
+                        pos: self.x, self.y
+                        size: [self.width, 16]
+                        radius: [8]
+                MDLabel:
+                    text: root.priority_label
+                    color: root.priority_rgba
+                    font_size: "8sp"
+                    bold: True
+                    halign: "center"
+                    valign: "middle"
+                    size_hint_y: None
+                    height: "16dp"
+                    shorten: True
+                    max_lines: 1
+
+            # Time / estimate
+            MDLabel:
+                text: root.time_display
+                color: 0.545, 0.545, 0.663, 1
+                font_size: "10sp"
+                size_hint_x: None
+                width: "70dp"
+                halign: "left"
+                shorten: True
+
+            # Deadline (if set)
+            MDLabel:
+                text: root.deadline if root.deadline else ""
+                color: (0.769, 0.357, 0.357, 1) if root.deadline else (0, 0, 0, 0)
+                font_size: "10sp"
+                size_hint_x: None
+                width: "80dp" if root.deadline else 0
+                shorten: True
+
+    # ── Action icons ───────────────────────────────────────────────
+    BoxLayout:
+        orientation: "horizontal"
+        size_hint_x: None
+        width: "56dp"
+        padding: ["0dp", "0dp", "8dp", "0dp"]
+        spacing: "0dp"
+        pos_hint: {"center_y": 0.5}
+
+        MDIconButton:
+            icon: "pencil"
+            theme_icon_color: "Custom"
+            icon_color: 0.353, 0.353, 0.502, 1
+            size_hint_x: None
+            width: "24dp"
+            icon_size: "14sp"
+            on_release: root.on_edit()
+
+        MDIconButton:
+            icon: "delete"
+            theme_icon_color: "Custom"
+            icon_color: 0.353, 0.353, 0.502, 1
+            size_hint_x: None
+            width: "24dp"
+            icon_size: "14sp"
+            on_release: root.on_delete()
