@@ -1,106 +1,140 @@
-"""TaskForm — task creation and editing form.
+"""TaskForm — task creation and editing form (Flet).
 
 Minimal form that initially shows only the title field.
 Advanced options (priority, deadline, estimated time, notes) expand on request.
-
-Design: Progressive disclosure — show only what's needed.
 """
 
 from __future__ import annotations
 
-import logging
-from pathlib import Path
-
-from kivy.clock import Clock
-from kivy.lang import Builder
-from kivy.properties import StringProperty, NumericProperty, ObjectProperty, BooleanProperty
-from kivy.uix.boxlayout import BoxLayout
-from kivymd.uix.textfield import MDTextField
-
-logger = logging.getLogger(__name__)
-
-# Load KV file
-_kv_path = Path(__file__).resolve().parent.parent / "kv" / "task_form.kv"
-if _kv_path.exists():
-    Builder.load_file(str(_kv_path))
+import flet as ft
 
 
-class TaskForm(BoxLayout):
-    """Form for creating or editing a task.
+def build_task_form(
+    title: str,
+    is_edit_mode: bool,
+    advanced_visible: bool,
+    estimated_minutes: int,
+    deadline: str,
+    notes: str,
+    on_title_change,
+    on_submit,
+    on_cancel,
+    on_toggle_advanced,
+    on_estimated_change,
+    on_deadline_change,
+    on_notes_change,
+) -> ft.Column:
+    """Build the task form.
 
-    Shows required fields first (title), optional fields expand on request.
+    Args:
+        title: Current title value.
+        is_edit_mode: Whether editing existing task.
+        advanced_visible: Whether advanced fields are shown.
+        estimated_minutes: Current estimated minutes.
+        deadline: Current deadline string.
+        notes: Current notes string.
+        on_title_change: Called when title changes.
+        on_submit: Called to submit the form.
+        on_cancel: Called to cancel.
+        on_toggle_advanced: Toggle advanced fields visibility.
+        on_estimated_change: Called when estimated minutes changes.
+        on_deadline_change: Called when deadline changes.
+        on_notes_change: Called when notes changes.
+
+    Returns:
+        A Column containing the form.
     """
-
-    # Form fields
-    title = StringProperty("")
-    description = StringProperty("")
-    priority = StringProperty("medium")
-    deadline = StringProperty("")
-    estimated_minutes = NumericProperty(0)
-    notes = StringProperty("")
-
-    # State
-    is_edit_mode = BooleanProperty(False)
-    editing_task_id = StringProperty("")
-    advanced_visible = BooleanProperty(False)
-
-    # Callbacks
-    on_submit = ObjectProperty(lambda title, priority: None)
-    on_cancel = ObjectProperty(lambda: None)
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        Clock.schedule_once(self._focus_title, 0.1)
-
-    def _focus_title(self, dt: float) -> None:
-        """Focus the title input field after the form is rendered."""
-        for child in self.walk():
-            if isinstance(child, MDTextField) and child.focus:
-                break
-
-    def submit(self) -> None:
-        """Submit the form — creates or updates the task."""
-        title = self.title.strip()
-        if not title:
-            # Show validation error
-            return
-        self.on_submit(title, self.priority)
-        self.reset()
-
-    def cancel(self) -> None:
-        """Cancel form entry."""
-        self.reset()
-        self.on_cancel()
-
-    def reset(self) -> None:
-        """Reset form to initial state."""
-        self.title = ""
-        self.description = ""
-        self.priority = "medium"
-        self.deadline = ""
-        self.estimated_minutes = 0
-        self.notes = ""
-        self.is_edit_mode = False
-        self.editing_task_id = ""
-        self.advanced_visible = False
-
-    def load_task(self, task_id: str, title: str, description: str = "",
-                  priority: str = "medium", deadline: str = "",
-                  estimated_minutes: int = 0, notes: str = "") -> None:
-        """Load a task's data into the form for editing."""
-        self.editing_task_id = task_id
-        self.title = title
-        self.description = description
-        self.priority = priority
-        self.deadline = deadline
-        self.estimated_minutes = estimated_minutes
-        self.notes = notes
-        self.is_edit_mode = True
-
-    def toggle_advanced(self) -> None:
-        """Toggle advanced options visibility."""
-        self.advanced_visible = not self.advanced_visible
-
-    @property
-    def submit_label(self) -> str:
-        return "Save" if self.is_edit_mode else "Create"
+    return ft.Column(
+        spacing=8,
+        controls=[
+            # Title input
+            ft.TextField(
+                value=title,
+                hint_text="Task title...",
+                on_change=lambda e: on_title_change(e.control.value),
+                height=48,
+                max_length=200,
+                border=ft.InputBorder.OUTLINE,
+                border_color="#2D2D4A",
+                focused_border_color="#4A6FA5",
+                bgcolor="#1A1A2E",
+                text_style=ft.TextStyle(color="#E8E8F0", size=13),
+                hint_style=ft.TextStyle(color="#747496", size=13),
+            ),
+            # Advanced toggle
+            ft.TextButton(
+                content="Advanced options" if not advanced_visible else "Hide options",
+                on_click=lambda _: on_toggle_advanced(),
+                style=ft.ButtonStyle(
+                    color="#9898B8",
+                ),
+            ),
+            # Advanced fields
+            ft.Column(
+                spacing=8,
+                visible=advanced_visible,
+                controls=[
+                    ft.TextField(
+                        value=str(estimated_minutes) if estimated_minutes else "",
+                        hint_text="Estimated minutes (optional)",
+                        on_change=lambda e: on_estimated_change(int(e.control.value) if e.control.value.isdigit() else 0),
+                        height=48,
+                        border=ft.InputBorder.OUTLINE,
+                        border_color="#2D2D4A",
+                        focused_border_color="#4A6FA5",
+                        bgcolor="#1A1A2E",
+                        keyboard_type=ft.KeyboardType.NUMBER,
+                        text_style=ft.TextStyle(color="#E8E8F0", size=13),
+                        hint_style=ft.TextStyle(color="#747496", size=13),
+                    ),
+                    ft.TextField(
+                        value=deadline,
+                        hint_text="Deadline (optional)",
+                        on_change=lambda e: on_deadline_change(e.control.value),
+                        height=48,
+                        border=ft.InputBorder.OUTLINE,
+                        border_color="#2D2D4A",
+                        focused_border_color="#4A6FA5",
+                        bgcolor="#1A1A2E",
+                        text_style=ft.TextStyle(color="#E8E8F0", size=13),
+                        hint_style=ft.TextStyle(color="#747496", size=13),
+                    ),
+                    ft.TextField(
+                        value=notes,
+                        hint_text="Notes (optional)",
+                        on_change=lambda e: on_notes_change(e.control.value),
+                        multiline=True,
+                        height=80,
+                        min_lines=2,
+                        max_lines=4,
+                        border=ft.InputBorder.OUTLINE,
+                        border_color="#2D2D4A",
+                        focused_border_color="#4A6FA5",
+                        bgcolor="#1A1A2E",
+                        text_style=ft.TextStyle(color="#E8E8F0", size=13),
+                        hint_style=ft.TextStyle(color="#747496", size=13),
+                    ),
+                ],
+            ),
+            # Action buttons
+            ft.Row(
+                spacing=8,
+                controls=[
+                    ft.Container(expand=True),
+                    ft.TextButton(
+                        content="Cancel",
+                        on_click=lambda _: on_cancel(),
+                    ),
+                    ft.ElevatedButton(
+                        content="Save" if is_edit_mode else "Create",
+                        on_click=lambda _: on_submit(),
+                        bgcolor="#4A6FA5",
+                        color="white",
+                        style=ft.ButtonStyle(
+                            shape=ft.RoundedRectangleBorder(radius=8),
+                        ),
+                    ),
+                ],
+            ),
+        ],
+    )

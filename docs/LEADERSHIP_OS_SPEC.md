@@ -1,13 +1,13 @@
 # Leadership OS — Implementation Specification
 
-> **Version:** 1.1  
-> **Date:** July 14, 2026  
+> **Version:** 2.0  
+> **Date:** July 20, 2026  
 > **Platform:** Desktop (Linux, macOS, Windows)  
-> **Framework:** Kivy + KivyMD  
-> **Language:** Python 3.11+  
+> **Framework:** Flet (Flutter-based)  
+> **Language:** Python 3.10+  
 > **Package Manager:** uv  
 > **Storage:** SQLite + JSON + TOML  
-> **License:** TBD
+> **License:** MIT
 
 ---
 
@@ -66,22 +66,21 @@ Leadership OS is a **local-first personal execution system** that reduces cognit
 
 | Layer | Technology | Rationale |
 |-------|-----------|-----------|
-| **UI Framework** | KivyMD (Material Design 3) | Built-in widgets (cards, dialogs, navigation drawers, snackbars), professional look, dark/light theme support |
-| **UI Styling** | Custom .kv + KV styles | Custom color palette defined in .kv files for Leadership OS brand (calm, professional, minimal) |
-| **Desktop** | Kivy Window System | Native desktop window with resizable layout |
+| **UI Framework** | Flet (Flutter-based) | Rich widget library, responsive layout, Material Design 3, async event loop, hot-reload, cross-platform (desktop + web + mobile) |
+| **UI Styling** | Programmatic (Python) | All UI built via `ft.Container`, `ft.Column`, `ft.Row`, etc. No KV files needed — Flet uses Python-native UI construction |
+| **Desktop** | Flet (Flutter Window) | Native desktop window via Flutter embedder, resizable, async |
 | **System Tray** | `pystray` (cross-platform) | Cross-platform tray icon via pystray + Pillow for icon generation. Consistent API on Linux, macOS, Windows. |
 | **Database** | SQLite via `sqlite3` stdlib | All structured data: tasks, sessions, breaks, reflections, summaries |
 | **App State** | JSON (`state.json`) | Runtime state: current app state, active task, timer info, window position |
 | **Config** | TOML (`config.toml`) | User configuration: working hours, theme, vault path, shortcuts |
 | **Dependency Mgmt** | `uv` | Fast, reproducible builds, virtual environments |
-| **Testing** | `pytest` + `pytest-asyncio` + `hypothesis` | Full test suite with coverage reports, property-based testing |
+| **Testing** | `pytest` | Full test suite with coverage reports |
 | **Linting** | `ruff` | Fast Python linter and formatter |
 | **Type Checking** | `pyright` | Static type analysis for better code quality |
-| **Packaging** | `briefcase` | Cross-platform packaging (`.deb`, `.dmg`, `.exe`) |
 
 ### Python Version
 
-- **Minimum:** Python 3.11 (stdlib `tomllib` available)
+- **Minimum:** Python 3.10
 - **Recommended:** Python 3.12+
 
 ### Dependencies (pyproject.toml)
@@ -90,27 +89,22 @@ Leadership OS is a **local-first personal execution system** that reduces cognit
 [project]
 name = "leadership-os"
 version = "0.1.0"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
-    "kivy>=2.3.0",
-    "kivymd>=2.0.0",
-    "pystray>=0.19.0",        # System tray (cross-platform)
-    "Pillow>=10.0.0",          # Icon generation for tray
-    "tomli-w>=1.0.0",          # TOML config writing (stdlib tomllib used for reading)
-    "hypothesis>=6.0.0",       # Property-based testing
+    "flet>=0.25.0",             # Flutter-based UI framework
+    "pystray>=0.19.0",          # System tray (cross-platform)
+    "Pillow>=10.0.0",           # Icon generation for tray
+    "tomli-w>=1.0.0",           # TOML config writing (stdlib tomllib used for reading)
+    "tomli>=2.0.0",             # TOML config reading (Python < 3.11)
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
-    "pytest-asyncio>=0.24.0",
     "ruff>=0.5.0",
     "pyright>=1.1.0",
 ]
-
-[project.optional-dependencies.packaging]
-briefcase = "briefcase>=0.3.0"  # For creating release packages
 ```
 
 ---
@@ -146,42 +140,23 @@ leadership-os/
 │   │   ├── config_manager.py       # TOML config read/write/defaults
 │   │   └── defaults.py             # Default configuration values
 │   │
-│   ├── ui/                          # Kivy/KivyMD UI layer
+│   ├── ui/                          # Flet UI layer
 │   │   ├── __init__.py
-│   │   ├── theme.py                # Custom color palette, typography
-│   │   ├── screens/                # Screen classes
+│   │   ├── theme.py                # Custom color palette, Flet theme builder
+│   │   ├── screens/                # Screen placeholder
 │   │   │   ├── __init__.py
-│   │   │   ├── planning_screen.py  # Morning planning
-│   │   │   ├── working_screen.py   # Focused work view
-│   │   │   ├── break_screen.py     # Break mode view
-│   │   │   ├── review_screen.py    # End-of-day review
-│   │   │   ├── history_screen.py   # Day history browser
-│   │   │   └── settings_screen.py  # Configuration
-│   │   ├── widgets/                # Reusable UI components
+│   │   ├── widgets/                # Reusable UI components (Flet)
 │   │   │   ├── __init__.py
-│   │   │   ├── task_card.py        # Task display card
-│   │   │   ├── timer_display.py    # Large timer with progress ring
-│   │   │   ├── progress_bar.py     # Daily progress indicator
-│   │   │   ├── sidebar.py          # Left navigation
-│   │   │   ├── execution_panel.py  # Right panel (timer, task info)
-│   │   │   ├── status_bar.py       # Bottom status bar
-│   │   │   ├── overlay_widget.py   # Floating mini-window content
-│   │   │   └── task_form.py        # Task creation/edit form
-│   │   └── kv/                     # Kivy language files
-│   │       ├── main.kv
-│   │       ├── planning_screen.kv
-│   │       ├── working_screen.kv
-│   │       ├── break_screen.kv
-│   │       ├── review_screen.kv
-│   │       ├── history_screen.kv
-│   │       ├── settings_screen.kv
-│   │       ├── task_card.kv
-│   │       ├── timer_display.kv
-│   │       ├── execution_panel.kv
-│   │       ├── sidebar.kv
-│   │       ├── status_bar.kv
-│   │       ├── overlay_widget.kv
-│   │       └── task_form.kv
+│   │   │   ├── task_card.py        # Task display card (build_task_card)
+│   │   │   ├── timer_display.py    # Large timer with progress ring (build_timer_display)
+│   │   │   ├── progress_bar.py     # Daily progress indicator (build_progress_bar)
+│   │   │   ├── sidebar.py          # Left navigation (build_sidebar)
+│   │   │   ├── execution_panel.py  # Right panel: timer, task, actions (build_execution_panel)
+│   │   │   ├── status_bar.py       # Bottom status bar (build_status_bar)
+│   │   │   ├── top_bar.py          # Top navigation bar (build_top_bar)
+│   │   │   └── task_form.py        # Task creation/edit form (build_task_form)
+│   │   └── kv/                     # KV files (obsolete after Flet migration)
+│   │       ├── __init__.py
 │   │
 │   ├── tray/                        # System tray integration
 │   │   ├── __init__.py
@@ -470,8 +445,8 @@ CREATE INDEX IF NOT EXISTS idx_daily_summaries_day_id ON daily_summaries(day_id)
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                    UI Layer (KivyMD)                         │
-│  Screens · Widgets · Theme · KV Language Files               │
+│                    UI Layer (Flet)                           │
+│  build_* functions · Flet Controls · Flet Theme               │
 ├──────────────────────────────────────────────────────────────┤
 │                    Application Core                          │
 │  State Manager · Event Bus · Config Manager                  │

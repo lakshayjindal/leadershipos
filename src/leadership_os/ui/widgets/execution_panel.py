@@ -1,91 +1,325 @@
-"""ExecutionPanel — right execution panel.
+"""ExecutionPanel — right execution panel (Flet).
 
 The heart of Leadership OS. Shows current task, focus timer, session info,
 daily progress, next task, and action buttons.
-
-Design: Always visible, ~300-360px wide. Displays the most critical information.
 """
 
 from __future__ import annotations
 
-import logging
-from pathlib import Path
+import flet as ft
 
-from kivy.clock import Clock
-from kivy.lang import Builder
-from kivy.properties import StringProperty, NumericProperty, BooleanProperty, ObjectProperty
-from kivy.uix.boxlayout import BoxLayout
+from leadership_os.ui.theme import Theme
+from leadership_os.utils.time_utils import format_duration_short
 
-from leadership_os.ui.theme import theme
-from leadership_os.utils.time_utils import format_duration_short, format_duration
-
-logger = logging.getLogger(__name__)
-
-# Load KV file
-_kv_path = Path(__file__).resolve().parent.parent / "kv" / "execution_panel.kv"
-if _kv_path.exists():
-    Builder.load_file(str(_kv_path))
+# ─── Card helper ────────────────────────────────────────────────────
 
 
-class ExecutionPanel(BoxLayout):
-    """Right execution panel — timer, current task, progress, actions."""
+def _card(
+    content: ft.Control,
+    height: int | None = None,
+    padding: int = 14,
+) -> ft.Container:
+    """Wrap content in a consistent card container."""
+    return ft.Container(
+        height=height,
+        bgcolor="#181830",
+        border_radius=10,
+        border=ft.Border.all(1, "#2D2D4A15"),
+        padding=padding,
+        content=content,
+    )
 
-    # Current task info
-    current_task_title = StringProperty("No active task")
-    current_task_priority = StringProperty("")
-    current_task_priority_color = StringProperty("#9898B8")
 
+# ─── Stat counter helper ────────────────────────────────────────────
+
+
+def _stat_box(value: str, label: str, color: str, border_color: str) -> ft.Container:
+    """Build a compact stat display."""
+    return ft.Container(
+        expand=True,
+        bgcolor="#15152B",
+        border_radius=6,
+        border=ft.Border.all(1, border_color),
+        padding=ft.Padding(0, 6, 0, 2),
+        content=ft.Column(
+            spacing=0,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Text(value, color=color, size=22, weight=ft.FontWeight.W_700),
+                ft.Text(label, color=color, size=8, opacity=0.5),
+            ],
+        ),
+    )
+
+
+# ─── Build Execution Panel ──────────────────────────────────────────
+
+
+def build_execution_panel(
+    # Task info
+    current_task_title: str,
+    current_task_priority: str,
     # Timer
-    timer_display = StringProperty("00:00:00")
-    timer_running = BooleanProperty(False)
-    is_break = BooleanProperty(False)
-
-    # Session info
-    session_elapsed = StringProperty("00:00")
-    session_estimated = StringProperty("--:--")
-
+    timer_display: str,
+    timer_running: bool,
+    panel_state: str,  # idle, working, break
+    session_elapsed: str,
+    session_estimated: str,
     # Progress
-    completed_count = NumericProperty(0)
-    total_count = NumericProperty(0)
-
-    # Next task
-    next_task_title = StringProperty("")
-
-    # Progress status
-    progress_status = StringProperty("No tasks yet")
-    focus_time_display = StringProperty("0m")
-
-    # State
-    panel_state = StringProperty("idle")  # idle, working, break
-
+    completed_count: int,
+    total_count: int,
+    progress_status: str,
+    focus_time_display: str,
+    # Next up
+    next_task_title: str,
     # Callbacks
-    on_pause = ObjectProperty(lambda: None)
-    on_complete = ObjectProperty(lambda: None)
-    on_start_break = ObjectProperty(lambda: None)
-    on_resume = ObjectProperty(lambda: None)
-    on_end_break = ObjectProperty(lambda: None)
+    on_pause,
+    on_complete,
+    on_start_break,
+    on_resume,
+    on_end_break,
+) -> ft.Container:
+    """Build the right execution panel."""
+    panel_width = 280
+    has_task = current_task_title != "No active task"
+    on_break = panel_state == "break"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._tick_clock = Clock.schedule_interval(self._update_timer, 1.0)
+    # Timer color
+    timer_color = "#66A66B" if timer_running else "#9898B8"
 
-    def _update_timer(self, dt: float) -> None:
-        """Update timer display each second."""
-        # Will be wired to TimerEngine in Phase 5
-        pass
+    # State label
+    if timer_running:
+        state_label = "FOCUSING"
+        state_color = "#66A66B"
+    elif on_break:
+        state_label = "ON BREAK"
+        state_color = "#C45B5B"
+    else:
+        state_label = "IDLE"
+        state_color = "#747496"
 
-    def set_task(self, title: str, priority: str) -> None:
-        self.current_task_title = title
-        self.current_task_priority = priority.upper()
-        self.current_task_priority_color = theme.priority(priority)
+    return ft.Container(
+        width=panel_width,
+        bgcolor="#14142A",
+        padding=12,
+        content=ft.Column(
+            spacing=8,
+            controls=[
+                # ── CARD: Current Task ───────────────────────────
+                ft.Container(
+                    height=56 if has_task else 0,
+                    opacity=1 if has_task else 0,
+                    visible=has_task,
+                    bgcolor="#181830",
+                    border_radius=10,
+                    border=ft.Border.all(1, "#2D2D4A15"),
+                    padding=ft.Padding(14, 10, 14, 10),
+                    content=ft.Column(
+                        spacing=4,
+                        controls=[
+                            ft.Text("CURRENT TASK", color="#747496", size=8, weight=ft.FontWeight.W_700),
+                            ft.Text(current_task_title, color="#E8E8F0", size=15, weight=ft.FontWeight.W_700),
+                            ft.Text(current_task_priority, color="#9898B8", size=10),
+                        ],
+                    ),
+                ),
 
-    def clear_task(self) -> None:
-        self.current_task_title = "No active task"
-        self.current_task_priority = ""
-        self.panel_state = "idle"
+                # ── CARD: Empty Placeholder ──────────────────────
+                ft.Container(
+                    height=56 if not has_task else 0,
+                    opacity=1 if not has_task else 0,
+                    visible=not has_task,
+                    bgcolor="#181830",
+                    border_radius=10,
+                    border=ft.Border.all(1, "#2D2D4A15"),
+                    padding=ft.Padding(14, 14, 14, 14),
+                    content=ft.Column(
+                        spacing=2,
+                        controls=[
+                            ft.Text("No active task", color="#747496", size=13),
+                            ft.Text("Start one from Today's Plan", color="#5A5A80", size=10),
+                        ],
+                    ),
+                ),
 
-    @property
-    def progress_percent(self) -> float:
-        if self.total_count > 0:
-            return (self.completed_count / self.total_count) * 100
-        return 0.0
+                # ── CARD: Timer (focal point) ────────────────────
+                _card(
+                    height=120,
+                    padding=14,
+                    content=ft.Column(
+                        spacing=0,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            # Large timer
+                            ft.Container(
+                                height=72,
+                                alignment=ft.Alignment(0,0),
+                                content=ft.Text(
+                                    timer_display,
+                                    color=timer_color,
+                                    size=56,
+                                    weight=ft.FontWeight.W_700,
+                                    font_family="Roboto Mono",
+                                ),
+                            ),
+                            # State label
+                            ft.Text(
+                                state_label,
+                                color=state_color,
+                                size=10,
+                                weight=ft.FontWeight.W_700,
+                            ),
+                            # Elapsed / remaining
+                            ft.Text(
+                                f"Elapsed {session_elapsed}  ·  Remain {session_estimated}",
+                                color="#5A5A80",
+                                size=9,
+                            ),
+                        ],
+                    ),
+                ),
+
+                # ── CARD: Progress ───────────────────────────────
+                _card(
+                    height=96,
+                    padding=14,
+                    content=ft.Column(
+                        spacing=6,
+                        controls=[
+                            # Header row
+                            ft.Row(
+                                controls=[
+                                    ft.Text("TODAY'S PROGRESS", color="#747496", size=8, weight=ft.FontWeight.W_700),
+                                    ft.Text(progress_status, color="#9898B8", size=10),
+                                ],
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            ),
+                            # Progress bar
+                            ft.Container(
+                                height=4,
+                                border_radius=2,
+                                bgcolor="#2D2D4A35",
+                                content=ft.Container(
+                                    height=4,
+                                    border_radius=2,
+                                    bgcolor="#66A66B" if total_count > 0 and completed_count >= total_count else "#4A6FA5",
+                                    width=max(4, panel_width * 0.75 * min(1.0, completed_count / max(1, total_count))),
+                                ),
+                            ),
+                            # Stat counters
+                            ft.Row(
+                                spacing=6,
+                                controls=[
+                                    _stat_box(str(int(completed_count)), "Done", "#66A66B", "#66A66B20"),
+                                    _stat_box(str(int(max(0, total_count - completed_count))), "Left", "#4A6FA5", "#4A6FA520"),
+                                    _stat_box(focus_time_display, "Focus", "#9898B8", "#9898B818"),
+                                ],
+                            ),
+                        ],
+                    ),
+                ),
+
+                # ── CARD: Next Up ────────────────────────────────
+                _card(
+                    height=42,
+                    padding=14,
+                    content=ft.Column(
+                        spacing=2,
+                        controls=[
+                            ft.Text("NEXT UP", color="#747496", size=8, weight=ft.FontWeight.W_700),
+                            ft.Text(
+                                next_task_title if next_task_title else "—",
+                                color="#9898B8" if next_task_title else "#4A4A70",
+                                size=13,
+                                italic=not next_task_title,
+                            ),
+                        ],
+                    ),
+                ),
+
+                # ── Spacer ───────────────────────────────────────
+                ft.Container(expand=True),
+
+                # ── CARD: Actions ────────────────────────────────
+                _card(
+                    height=160,
+                    padding=14,
+                    content=ft.Column(
+                        spacing=4,
+                        controls=[
+                            ft.Text("ACTIONS", color="#747496", size=8, weight=ft.FontWeight.W_700),
+                            ft.Container(height=2),
+
+                            # Complete — PRIMARY
+                            ft.ElevatedButton(
+                                content="✓  Complete Task",
+                                disabled=not has_task,
+                                on_click=lambda _: on_complete(),
+                                height=40,
+                                bgcolor="#4A6FA5" if has_task else "#4A6FA540",
+                                color="white",
+                                style=ft.ButtonStyle(
+                                    shape=ft.RoundedRectangleBorder(radius=8),
+                                ),
+                            ),
+
+                            # Pause
+                            ft.TextButton(
+                                content="II  Pause",
+                                disabled=not has_task,
+                                on_click=lambda _: on_pause(),
+                                height=34,
+                                style=ft.ButtonStyle(
+                                    color="#9898B8" if has_task else "#9898B840",
+                                    bgcolor="#2D2D4A25" if has_task else "#2D2D4A15",
+                                    shape=ft.RoundedRectangleBorder(radius=6),
+                                ),
+                            ),
+
+                            # Start Break
+                            ft.TextButton(
+                                content="☕  Start Break",
+                                disabled=not has_task,
+                                on_click=lambda _: on_start_break(),
+                                height=30,
+                                style=ft.ButtonStyle(
+                                    color="#9898B8B0" if has_task else "#9898B840",
+                                    bgcolor="#2D2D4A1A" if has_task else "#2D2D4A0D",
+                                    shape=ft.RoundedRectangleBorder(radius=6),
+                                ),
+                            ),
+
+                            # Separator
+                            ft.Divider(height=1, color="#2D2D4A0D"),
+
+                            # Resume — BREAK PRIMARY
+                            ft.ElevatedButton(
+                                content="▶  Resume Work",
+                                disabled=not on_break,
+                                on_click=lambda _: on_resume(),
+                                height=40,
+                                bgcolor="#66A66B" if on_break else "#66A66B35",
+                                color="white",
+                                style=ft.ButtonStyle(
+                                    shape=ft.RoundedRectangleBorder(radius=8),
+                                ),
+                            ),
+
+                            # End Break
+                            ft.TextButton(
+                                content="■  End Break",
+                                disabled=not on_break,
+                                on_click=lambda _: on_end_break(),
+                                height=30,
+                                style=ft.ButtonStyle(
+                                    color="#9898B8B0" if on_break else "#9898B840",
+                                    bgcolor="#2D2D4A1A" if on_break else "#2D2D4A0D",
+                                    shape=ft.RoundedRectangleBorder(radius=6),
+                                ),
+                            ),
+                        ],
+                    ),
+                ),
+            ],
+        ),
+    )

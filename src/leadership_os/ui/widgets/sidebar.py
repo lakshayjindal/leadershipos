@@ -1,94 +1,201 @@
-"""Sidebar — left navigation panel.
+"""Sidebar — left navigation panel (Flet).
 
 Provides primary navigation between Today, History, and Settings contexts.
 Bottom section shows lightweight session information.
-
-Design: Minimal, compact, never resized. Uses calm blue accent for active state.
 """
 
 from __future__ import annotations
 
-from kivy.clock import Clock
-from kivy.lang import Builder
-from kivy.properties import StringProperty, NumericProperty, ObjectProperty
-from kivy.uix.behaviors import ButtonBehavior
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.relativelayout import RelativeLayout
-from kivymd.uix.behaviors import RectangularRippleBehavior
+import flet as ft
 
-from leadership_os.ui.theme import theme
 from leadership_os.utils.time_utils import format_duration_short
 
-import logging
-from pathlib import Path
+# ─── SidebarNavItem ─────────────────────────────────────────────────
 
-logger = logging.getLogger(__name__)
-
-# Load KV file
-_kv_path = Path(__file__).resolve().parent.parent / "kv" / "sidebar.kv"
-if _kv_path.exists():
-    Builder.load_file(str(_kv_path))
+SIDEBAR_WIDTH = 160
 
 
-class SidebarNavItem(ButtonBehavior, RectangularRippleBehavior, RelativeLayout):
-    """A single navigation item in the sidebar."""
+def build_nav_item(
+    text: str,
+    icon: str,
+    active: bool,
+    on_click,
+) -> ft.Container:
+    """Build a single navigation item."""
+    bg = "#282850" if active else "transparent"
+    text_color = "#E8E8F0" if active else "#9898B8"
+    icon_color = "#4A6FA5" if active else "#747496"
 
-    text = StringProperty("")
-    icon = StringProperty("")
-    active = NumericProperty(0)  # 0 = inactive, 1 = active
-    badge_text = StringProperty("")
+    return ft.Container(
+        height=34,
+        bgcolor=bg,
+        border_radius=6,
+        on_click=on_click,
+        content=ft.Row(
+            spacing=8,
+            controls=[
+                # Active indicator
+                ft.Container(
+                    width=3,
+                    height=14,
+                    bgcolor="#4A6FA5" if active else "transparent",
+                    border_radius=1.5,
+                ),
+                ft.Icon(
+                    icon=icon,
+                    size=15,
+                    color=icon_color,
+                ),
+                ft.Text(
+                    text,
+                    color=text_color,
+                    size=12,
+                    weight=ft.FontWeight.W_700 if active else ft.FontWeight.W_400,
+                ),
+            ],
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+    )
 
-    def on_touch_down(self, touch):
-        if self.collide_point(*touch.pos):
-            # KV binding handles active state via root.app_state
-            return super().on_touch_down(touch)
-        return super().on_touch_down(touch)
 
+def build_sidebar(
+    app_state: str,
+    focus_time: int,
+    completed_count: int,
+    total_count: int,
+    status_text: str,
+    today_callback,
+    history_callback,
+    settings_callback,
+) -> ft.Container:
+    """Build the complete sidebar.
 
-class Sidebar(BoxLayout):
-    """Left navigation sidebar for Leadership OS.
+    Args:
+        app_state: Current application state string.
+        focus_time: Total focus seconds for today.
+        completed_count: Number of completed tasks.
+        total_count: Total number of tasks.
+        status_text: Human-readable status ("Ready", "Focusing", etc.)
+        today_callback: Callback for Today nav item.
+        history_callback: Callback for History nav item.
+        settings_callback: Callback for Settings nav item.
 
-    Displays navigation items and a bottom section with current session info.
+    Returns:
+        A Container representing the complete sidebar.
     """
+    focus_display = format_duration_short(focus_time)
+    progress_text = f"{int(completed_count)}/{int(total_count)} tasks · {status_text}"
 
-    app_state = StringProperty("startup")
-    focus_time = NumericProperty(0)
-    completed_count = NumericProperty(0)
-    total_count = NumericProperty(0)
-    status_text = StringProperty("Ready")
+    return ft.Container(
+        width=SIDEBAR_WIDTH,
+        bgcolor="#14142A",
+        padding=ft.Padding(8, 12, 8, 8),
+        content=ft.Column(
+            spacing=2,
+            controls=[
+                # NAVIGATION label
+                ft.Container(
+                    padding=ft.Padding(10, 0, 0, 0),
+                    content=ft.Text(
+                        "NAVIGATION",
+                        color="#747496",
+                        size=9,
+                        weight=ft.FontWeight.W_700,
+                    ),
+                ),
 
-    # Callbacks (no 'on_' prefix — Kivy reserves on_X for event bindings)
-    today_callback = ObjectProperty(lambda: None)
-    history_callback = ObjectProperty(lambda: None)
-    settings_callback = ObjectProperty(lambda: None)
+                # Navigation items
+                build_nav_item("Today", ft.Icons.CALENDAR_TODAY,
+                               active=app_state in ("planning", "working", "break", "idle", "review"),
+                               on_click=lambda _: today_callback()),
+                build_nav_item("History", ft.Icons.HISTORY, active=False,
+                               on_click=lambda _: history_callback()),
+                build_nav_item("Settings", ft.Icons.SETTINGS, active=False,
+                               on_click=lambda _: settings_callback()),
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._update_clock = Clock.schedule_interval(self._update_info, 5.0)
+                # Spacer
+                ft.Container(expand=True, height=0.1),
 
-    def _update_info(self, dt: float) -> None:
-        """Periodically update session info display."""
-        pass  # Will be wired to engines in Phase 4+
+                # ── Focus Target Card ────────────────────────────
+                ft.Container(
+                    height=60,
+                    bgcolor="#15152B",
+                    border_radius=8,
+                    padding=ft.Padding(10, 8, 10, 8),
+                    content=ft.Column(
+                        spacing=4,
+                        controls=[
+                            ft.Row(
+                                controls=[
+                                    ft.Text("FOCUS TARGET", color="#747496", size=8, weight=ft.FontWeight.W_700),
+                                    ft.Text(focus_display, color="#747496", size=10, weight=ft.FontWeight.W_700),
+                                ],
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            ),
+                            # Mini progress bar
+                            ft.Container(
+                                height=3,
+                                border_radius=1.5,
+                                bgcolor="#2D2D4A",
+                                content=ft.Container(
+                                    height=3,
+                                    border_radius=1.5,
+                                    bgcolor="#4A6FA5",
+                                    width=max(3, SIDEBAR_WIDTH * 0.75 * min(1.0, completed_count / max(1, total_count))),
+                                ),
+                            ),
+                            ft.Text(progress_text, color="#5A5A80", size=9),
+                        ],
+                    ),
+                ),
 
-    def on_app_state(self, instance, value: str) -> None:
-        """Update status_text when app_state changes."""
-        if value in ("planning", "idle", "startup"):
-            self.status_text = "Ready"
-        elif value == "working":
-            self.status_text = "Focusing"
-        elif value == "break":
-            self.status_text = "On Break"
-        elif value == "review":
-            self.status_text = "Reviewing"
-        else:
-            self.status_text = "Ready"
+                # Spacer
+                ft.Container(expand=True),
 
-    @property
-    def focus_display(self) -> str:
-        return format_duration_short(self.focus_time)
-
-    @property
-    def progress_display(self) -> str:
-        if self.total_count > 0:
-            return f"{self.completed_count} / {self.total_count}"
-        return "0 / 0"
+                # ── Session Stats Card ───────────────────────────
+                ft.Container(
+                    height=140,
+                    bgcolor="#15152B",
+                    border_radius=8,
+                    padding=ft.Padding(10, 10, 10, 10),
+                    content=ft.Column(
+                        spacing=6,
+                        controls=[
+                            ft.Text("TODAY", color="#747496", size=9, weight=ft.FontWeight.W_700),
+                            ft.Text(
+                                f"{int(completed_count)} / {int(total_count)}",
+                                color="#E8E8F0",
+                                size=24,
+                                weight=ft.FontWeight.W_700,
+                            ),
+                            ft.Divider(height=1, color="#2D2D4A20"),
+                            ft.Row(
+                                controls=[
+                                    ft.Text(f"Focus {focus_display}", color="#747496", size=10),
+                                    ft.Text(f"Tasks {int(total_count)}", color="#747496", size=10),
+                                ],
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            ),
+                            ft.Row(
+                                spacing=6,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                controls=[
+                                    ft.Icon(
+                                        icon=ft.Icons.CIRCLE,
+                                        size=6,
+                                        color="#66A66B" if app_state == "working" else "#4A6FA5" if app_state in ("planning", "idle", "startup") else "#C45B5B",
+                                    ),
+                                    ft.Text(
+                                        status_text,
+                                        color="#E8E8F0" if app_state == "working" else "#747496",
+                                        size=10,
+                                        weight=ft.FontWeight.W_700 if app_state == "working" else ft.FontWeight.W_400,
+                                    ),
+                                ],
+                            ),
+                        ],
+                    ),
+                ),
+            ],
+        ),
+    )

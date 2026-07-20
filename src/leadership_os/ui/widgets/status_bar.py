@@ -1,46 +1,41 @@
-"""StatusBar — bottom status bar.
+"""StatusBar — bottom status bar (Flet).
 
-Shows minimal session information: focus time, completed tasks, keyboard hint.
+Shows minimal session information: focus time, completed tasks.
 Design: Very small, unobtrusive, hairline-top border.
 """
 
 from __future__ import annotations
 
-import logging
-from pathlib import Path
-
-from kivy.clock import Clock
-from kivy.lang import Builder
-from kivy.properties import StringProperty, NumericProperty, ObjectProperty
-from kivy.uix.boxlayout import BoxLayout
+import flet as ft
 
 from leadership_os.utils.time_utils import format_duration_short
 
-logger = logging.getLogger(__name__)
 
-# Load KV file
-_kv_path = Path(__file__).resolve().parent.parent / "kv" / "status_bar.kv"
-if _kv_path.exists():
-    Builder.load_file(str(_kv_path))
+def build_status_bar(
+    focus_time_display: str,
+    completed_display: str,
+) -> ft.Container:
+    """Build the bottom status bar.
 
+    Args:
+        focus_time_display: Formatted focus time string.
+        completed_display: Number of completed tasks.
 
-class StatusBar(BoxLayout):
-    """Bottom status bar showing lightweight session information."""
-
-    focus_time_display = StringProperty("0m")
-    completed_display = StringProperty("0")
-    hint_text = StringProperty("[ESC] Help")
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._update_clock = Clock.schedule_interval(self._tick, 5.0)
-
-    def _tick(self, dt: float) -> None:
-        """Periodic update — will be wired to engines in Phase 4+."""
-        pass
-
-    def update_focus(self, seconds: int) -> None:
-        self.focus_time_display = format_duration_short(seconds)
-
-    def update_completed(self, completed: int) -> None:
-        self.completed_display = str(completed)
+    Returns:
+        A Container representing the status bar.
+    """
+    return ft.Container(
+        height=22,
+        bgcolor="#0D0D1A",
+        padding=ft.Padding(16, 0, 16, 0),
+        border=ft.Border(top=ft.BorderSide(1, "#2D2D4A35")),
+        content=ft.Row(
+            spacing=16,
+            controls=[
+                ft.Text(f"Focus {focus_time_display}", color="#5A5A80", size=9),
+                ft.Text(f"Done {completed_display}", color="#5A5A80", size=9),
+                ft.Container(expand=True),
+            ],
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+    )

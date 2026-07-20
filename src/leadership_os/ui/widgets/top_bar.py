@@ -1,33 +1,96 @@
-"""TopBar — top navigation bar.
+"""TopBar — top navigation bar (Flet).
 
 Displays the Leadership OS brand, and right-side action buttons
 (search, settings, command palette).
-
-Design: Slim bar with a primary-colored brand accent block on the left.
 """
 
 from __future__ import annotations
 
-import logging
-from pathlib import Path
+import flet as ft
 
-from kivy.lang import Builder
-from kivy.properties import StringProperty, ObjectProperty
-from kivy.uix.boxlayout import BoxLayout
-
-from leadership_os.ui.theme import theme
-
-logger = logging.getLogger(__name__)
-
-# Load KV is embedded in main.kv — no separate file needed for TopBar
+from leadership_os.ui.theme import Theme
 
 
-class TopBar(BoxLayout):
-    """Top navigation bar with brand and action buttons."""
+def build_top_bar(
+    on_search,
+    on_settings,
+    on_command_palette,
+) -> ft.Container:
+    """Build the top navigation bar.
 
-    current_screen = StringProperty("today")
+    Args:
+        on_search: Callback for search button.
+        on_settings: Callback for settings button.
+        on_command_palette: Callback for command palette button.
 
-    # Callbacks
-    on_search = ObjectProperty(lambda: None)
-    on_settings = ObjectProperty(lambda: None)
-    on_command_palette = ObjectProperty(lambda: None)
+    Returns:
+        A Container representing the top bar.
+    """
+    return ft.Container(
+        height=48,
+        bgcolor="#14142A",
+        content=ft.Row(
+            spacing=0,
+            controls=[
+                # Brand section (160dp, matching sidebar width)
+                ft.Container(
+                    width=160,
+                    height=48,
+                    bgcolor="#14142A",
+                    content=ft.Row(
+                        spacing=0,
+                        controls=[
+                            # Accent bar
+                            ft.Container(
+                                width=3,
+                                height=48,
+                                bgcolor="#4A6FA5",
+                            ),
+                            ft.Container(width=12),
+                            ft.Text(
+                                "Leadership OS",
+                                color="#E8E8F0",
+                                size=11,
+                                weight=ft.FontWeight.W_700,
+                            ),
+                        ],
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                ),
+                # Spacer
+                ft.Container(expand=True),
+                # Right action buttons
+                ft.Container(
+                    width=140,
+                    height=48,
+                    bgcolor="#14142A",
+                    padding=ft.Padding(4, 0, 4, 0),
+                    content=ft.Row(
+                        spacing=2,
+                        controls=[
+                            ft.IconButton(
+                                icon=ft.Icons.SEARCH,
+                                icon_size=17,
+                                icon_color="#747496",
+                                on_click=lambda _: on_search(),
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.SETTINGS,
+                                icon_size=17,
+                                icon_color="#747496",
+                                on_click=lambda _: on_settings(),
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.KEYBOARD,
+                                icon_size=17,
+                                icon_color="#747496",
+                                on_click=lambda _: on_command_palette(),
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.END,
+                    ),
+                ),
+            ],
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+    )

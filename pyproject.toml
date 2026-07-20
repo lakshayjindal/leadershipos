@@ -21,12 +21,11 @@ classifiers = [
 ]
 
 dependencies = [
-    "kivy>=2.1.0",
-    "kivymd>=1.2.0",
+    "flet>=0.25.0",
     "pystray>=0.19.0",
     "Pillow>=10.0.0",
     "tomli-w>=1.0.0",
-    "hypothesis>=6.0.0",
+    "tomli>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -42,10 +41,7 @@ packaging = [
 ]
 
 [project.scripts]
-leadership-os = "leadership_os.app:main"
-
-[project.gui-scripts]
-leadership-os = "leadership_os.app:main"
+leadership-os = "leadership_os.__main__:main"
 
 [build-system]
 requires = ["hatchling"]

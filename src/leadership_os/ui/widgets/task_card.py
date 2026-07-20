@@ -1,102 +1,185 @@
-"""TaskCard — displays a single task in the task list.
+"""TaskCard — displays a single task in the task list (Flet).
 
 Shows title, priority indicator, deadline, estimated time, and status.
-Design: Clean card with hairline border, priority color accent on left edge.
 """
 
 from __future__ import annotations
 
-import logging
-from pathlib import Path
+import flet as ft
 
-from kivy.lang import Builder
-from kivy.properties import StringProperty, NumericProperty, BooleanProperty, ObjectProperty, ListProperty
-from kivy.uix.boxlayout import BoxLayout
-
-from leadership_os.ui.theme import theme
+from leadership_os.ui.theme import PRIORITY_RGBA, PRIORITY_LABELS
 from leadership_os.utils.time_utils import format_duration_short
 
-logger = logging.getLogger(__name__)
 
-# Load KV file
-_kv_path = Path(__file__).resolve().parent.parent / "kv" / "task_card.kv"
-if _kv_path.exists():
-    Builder.load_file(str(_kv_path))
+def build_task_card(
+    task_id: str,
+    title: str,
+    priority: str,
+    status: str,
+    is_active: bool,
+    is_completed: bool,
+    deadline: str,
+    estimated_minutes: int,
+    actual_seconds: int,
+    on_activate,
+    on_complete,
+    on_edit,
+    on_delete,
+) -> ft.Container:
+    """Build a single task card.
 
+    Args:
+        task_id: Unique task identifier.
+        title: Task title text.
+        priority: Priority level string.
+        status: Task status string.
+        is_active: Whether this is the currently active task.
+        is_completed: Whether this task is completed.
+        deadline: Deadline string or empty.
+        estimated_minutes: Estimated duration in minutes.
+        actual_seconds: Actual time spent in seconds.
+        on_activate: Called when task is clicked to activate.
+        on_complete: Called when checkbox is clicked to complete.
+        on_edit: Called when edit icon is clicked.
+        on_delete: Called when delete icon is clicked.
 
-class TaskCard(BoxLayout):
-    """A card representing a single task in the task list."""
+    Returns:
+        A Container representing the task card.
+    """
+    priority_rgba = PRIORITY_RGBA.get(priority, (0.408, 0.408, 0.627, 1))
+    priority_label = PRIORITY_LABELS.get(priority, "MEDIUM")
+    accent_color = f"rgba({int(priority_rgba[0]*255)},{int(priority_rgba[1]*255)},{int(priority_rgba[2]*255)},{priority_rgba[3]})"
 
-    # Task data
-    task_id = StringProperty("")
-    title = StringProperty("")
-    priority = StringProperty("medium")
-    status = StringProperty("pending")
-    deadline = StringProperty("")
-    estimated_minutes = NumericProperty(0)
-    actual_seconds = NumericProperty(0)
-    notes = StringProperty("")
+    # Status icon
+    if is_active:
+        status_icon = ft.Icons.PLAY_CIRCLE
+        status_color = "#4A6FA5"
+    elif is_completed:
+        status_icon = ft.Icons.CHECK_CIRCLE
+        status_color = "#66A66B"
+    elif status == "paused":
+        status_icon = ft.Icons.PAUSE_CIRCLE
+        status_color = "#6868A0"
+    else:
+        status_icon = ft.Icons.RADIO_BUTTON_UNCHECKED
+        status_color = "#9898B8"
 
-    # Display state
-    is_active = BooleanProperty(False)
-    is_completed = BooleanProperty(False)
-    display_order = NumericProperty(0)
+    # Time display
+    if actual_seconds > 0:
+        time_text = format_duration_short(actual_seconds)
+    elif estimated_minutes > 0:
+        time_text = f"est. {estimated_minutes}m"
+    else:
+        time_text = ""
 
-    # Callbacks
-    on_activate = ObjectProperty(lambda: None)
-    on_complete = ObjectProperty(lambda: None)
-    on_edit = ObjectProperty(lambda: None)
-    on_delete = ObjectProperty(lambda: None)
+    # Title color
+    title_color = "#E8E8F0" if not is_completed else "#9898B8"
+    title_opacity = 0.6 if is_completed else 1.0
 
-    @property
-    def priority_rgba(self) -> list[float]:
-        """RGBA tuple for the priority accent color."""
-        return list(theme.to_rgba(theme.priority(self.priority)))
-
-    @property
-    def priority_bg_rgba(self) -> list[float]:
-        """RGBA tuple for the priority badge background (muted version)."""
-        rgba = self.priority_rgba
-        return rgba[:3] + [0.2]
-
-    @property
-    def status_rgba(self) -> list[float]:
-        """RGBA tuple for the status icon color."""
-        colors = {
-            "pending": theme.text("secondary"),
-            "active": theme.dark["primary"],
-            "paused": theme.text("muted"),
-            "completed": theme.dark["success"],
-            "carried_forward": theme.dark["warning"],
-            "archived": theme.text("muted"),
-        }
-        hex_color = colors.get(self.status, theme.text("secondary"))
-        return list(theme.to_rgba(hex_color))
-
-    @property
-    def priority_color(self) -> str:
-        return theme.priority(self.priority)
-
-    @property
-    def priority_label(self) -> str:
-        return self.priority.upper()
-
-    @property
-    def time_display(self) -> str:
-        if self.actual_seconds > 0:
-            return format_duration_short(self.actual_seconds)
-        if self.estimated_minutes > 0:
-            return f"est. {self.estimated_minutes}m"
-        return ""
-
-    @property
-    def status_icon(self) -> str:
-        icons = {
-            "pending": "checkbox-blank-circle-outline",
-            "active": "play-circle",
-            "paused": "pause-circle",
-            "completed": "check-circle",
-            "carried_forward": "forward",
-            "archived": "archive",
-        }
-        return icons.get(self.status, "checkbox-blank-circle-outline")
+    return ft.Container(
+        height=48,
+        bgcolor="#15152B",
+        border_radius=8,
+        border=ft.Border.all(1, "#2D2D4A2E"),
+        padding=0,
+        content=ft.Row(
+            spacing=0,
+            controls=[
+                # Left accent strip
+                ft.Container(
+                    width=3,
+                    height=36,
+                    margin=ft.Margin(0, 6, 0, 6),
+                    bgcolor=accent_color,
+                    border_radius=1.5,
+                ),
+                ft.Container(width=8),
+                # Status icon (checkbox)
+                ft.IconButton(
+                    icon=status_icon,
+                    icon_size=16,
+                    icon_color=status_color,
+                    width=28,
+                    height=28,
+                    on_click=lambda _: on_activate() if not is_active else on_complete(),
+                ),
+                ft.Container(width=6),
+                # Content
+                ft.Container(
+                    expand=True,
+                    padding=ft.Padding(0, 6, 0, 6),
+                    content=ft.Column(
+                        spacing=2,
+                        controls=[
+                            # Title
+                            ft.Text(
+                                title,
+                                color=title_color,
+                                opacity=title_opacity,
+                                size=12,
+                                weight=ft.FontWeight.W_700 if is_active else ft.FontWeight.W_400,
+                            ),
+                            # Meta row
+                            ft.Row(
+                                spacing=6,
+                                controls=[
+                                    # Priority badge
+                                    ft.Container(
+                                        width=58,
+                                        height=16,
+                                        bgcolor=f"rgba({int(priority_rgba[0]*255)},{int(priority_rgba[1]*255)},{int(priority_rgba[2]*255)},50)",
+                                        border_radius=8,
+                                        alignment=ft.Alignment(0,0),
+                                        content=ft.Text(
+                                            priority_label,
+                                            color=accent_color,
+                                            size=8,
+                                            weight=ft.FontWeight.W_700,
+                                        ),
+                                    ),
+                                    # Time
+                                    ft.Text(
+                                        time_text,
+                                        color="#9898B8" if time_text else "transparent",
+                                        size=10,
+                                        visible=bool(time_text),
+                                    ),
+                                    # Deadline
+                                    ft.Text(
+                                        deadline,
+                                        color="#C45B5B" if deadline else "transparent",
+                                        size=10,
+                                        visible=bool(deadline),
+                                    ),
+                                ],
+                            ),
+                        ],
+                    ),
+                ),
+                # Action icons
+                ft.Row(
+                    spacing=0,
+                    controls=[
+                        ft.IconButton(
+                            icon=ft.Icons.EDIT,
+                            icon_size=13,
+                            icon_color="#4A4A70",
+                            width=22,
+                            height=22,
+                            on_click=lambda _: on_edit(),
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.DELETE_OUTLINE,
+                            icon_size=13,
+                            icon_color="#4A4A70",
+                            width=22,
+                            height=22,
+                            on_click=lambda _: on_delete(),
+                        ),
+                    ],
+                ),
+                ft.Container(width=6),
+            ],
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+    )
