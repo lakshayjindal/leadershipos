@@ -1,28 +1,23 @@
 # ExecutionPanel — Right execution panel
-# Refined: dominant timer, subtle borders, compact actions, meaningful progress
+# Refined: clean 60sp timer, elevated stat cards, consistent spacing
 # KivyMD 2.0 compatible
 
 <ExecutionPanel>:
     orientation: "vertical"
     size_hint_x: None
-    width: "300dp"
+    width: "280dp"
     padding: ["16dp", "16dp", "16dp", "12dp"]
-    spacing: "8dp"
+    spacing: 0
     md_bg_color: 0.078, 0.078, 0.141, 1
 
-    canvas.before:
-        Color:
-            rgba: 0.176, 0.176, 0.29, 0.3
-        Line:
-            width: 1
-            points: [self.x + 0.5, self.y, self.x + 0.5, self.top]
-
-    # ── Current Task ───────────────────────────────────────────────
+    # ── CURRENT TASK ─────────────────────────────────────────────────
     BoxLayout:
         orientation: "vertical"
         size_hint_y: None
-        height: "52dp"
+        height: "48dp" if root.current_task_title != "No active task" else "0dp"
         spacing: "2dp"
+        opacity: 1 if root.current_task_title != "No active task" else 0
+        disabled: root.current_task_title == "No active task"
 
         MDLabel:
             text: "CURRENT TASK"
@@ -35,81 +30,130 @@
         MDLabel:
             text: root.current_task_title
             color: (0.91, 0.91, 0.94, 1) if root.current_task_title != "No active task" else (0.353, 0.353, 0.502, 1)
-            font_size: "14sp"
-            bold: True if root.current_task_title != "No active task" else False
+            font_size: "15sp"
+            bold: True
             shorten: True
             size_hint_y: None
             height: "22dp"
 
         MDLabel:
+            id: task_priority_label
             text: root.current_task_priority
-            color: (0.545, 0.545, 0.663, 1) if root.current_task_priority else (0.353, 0.353, 0.502, 1)
+            color: (0.408, 0.408, 0.627, 1) if root.current_task_priority else (0.353, 0.353, 0.502, 1)
             font_size: "10sp"
             size_hint_y: None
             height: "14dp"
 
-    # ── Timer Section (dominant) ───────────────────────────────────
+    # ── Current Task Empty Placeholder (shown when no task) ──────────
+    BoxLayout:
+        id: empty_task_placeholder
+        orientation: "vertical"
+        size_hint_y: None
+        height: "48dp" if root.current_task_title == "No active task" else "0dp"
+        spacing: "2dp"
+        padding: ["12dp", "8dp", "12dp", "8dp"]
+        opacity: 1 if root.current_task_title == "No active task" else 0
+        disabled: root.current_task_title != "No active task"
+
+        canvas.before:
+            Color:
+                rgba: 0.082, 0.082, 0.149, 1
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [8]
+            Color:
+                rgba: 0.176, 0.176, 0.29, 0.1
+            Line:
+                width: 1
+                rounded_rectangle: [self.x, self.y, self.width, self.height, 8, 8]
+
+        MDLabel:
+            text: "No active task"
+            color: 0.353, 0.353, 0.502, 1
+            font_size: "12sp"
+            size_hint_y: None
+            height: "16dp"
+
+        MDLabel:
+            text: "Start one from Today's Plan"
+            color: 0.255, 0.255, 0.412, 1
+            font_size: "10sp"
+            size_hint_y: None
+            height: "14dp"
+
+    Widget:
+        size_hint_y: None
+        height: "8dp"
+
+    # ── TIMER (60sp, clean) ──────────────────────────────────────────
     BoxLayout:
         orientation: "vertical"
         size_hint_y: None
         height: "100dp"
-        spacing: "4dp"
-        padding: ["0dp", "8dp", "0dp", "0dp"]
+        spacing: "2dp"
 
-        # Large monospace timer
+        # Huge monospace timer
         MDLabel:
             text: root.timer_display
-            color: (0.29, 0.435, 0.647, 1) if root.timer_running else (0.545, 0.545, 0.663, 1)
-            font_size: "48sp"
+            color: (0.29, 0.435, 0.647, 1) if root.timer_running else (0.408, 0.408, 0.627, 1)
+            font_size: "60sp"
             bold: True
             halign: "center"
             valign: "middle"
             font_name: "RobotoMono-Regular"
             size_hint_y: 1
 
-        # Elapsed / Estimated on one line
+        # State badge + elapsed/estimated
         BoxLayout:
             orientation: "horizontal"
             size_hint_y: None
-            height: "16dp"
-            spacing: "24dp"
-            halign: "center"
+            height: "22dp"
+            spacing: "8dp"
+            padding: ["32dp", 0, "32dp", 0]
 
             MDLabel:
-                text: f"Elapsed: {root.session_elapsed}"
-                color: 0.545, 0.545, 0.663, 1
+                text: "FOCUSING" if root.timer_running else ("PAUSED" if root.panel_state in ("break",) else "IDLE")
+                color: (0.357, 0.604, 0.42, 1) if root.timer_running else (0.353, 0.353, 0.502, 1)
                 font_size: "10sp"
+                bold: True
+                size_hint_x: 0.4
+                halign: "left"
+
+            MDLabel:
+                text: f"{root.session_elapsed} / {root.session_estimated}"
+                color: 0.353, 0.353, 0.502, 1
+                font_size: "9sp"
+                size_hint_x: 0.6
                 halign: "right"
-                size_hint_x: 0.5
+                shorten: True
 
-            MDLabel:
-                text: f"Est: {root.session_estimated}"
-                color: 0.545, 0.545, 0.663, 1
-                font_size: "10sp"
-                size_hint_x: 0.5
-
-    # ── Subdued Divider ────────────────────────────────────────────
+    # ── Thin divider ─────────────────────────────────────────────────
     Widget:
         size_hint_y: None
         height: "1dp"
         canvas:
             Color:
-                rgba: 0.176, 0.176, 0.29, 0.2
+                rgba: 0.176, 0.176, 0.29, 0.1
             Rectangle:
                 pos: self.pos
                 size: self.size
 
-    # ── Progress Section (compact stats) ───────────────────────────
+    Widget:
+        size_hint_y: None
+        height: "8dp"
+
+    # ── TODAY'S PROGRESS ────────────────────────────────────────────
     BoxLayout:
         orientation: "vertical"
         size_hint_y: None
-        height: "60dp"
-        spacing: "6dp"
+        height: "78dp"
+        spacing: "8dp"
 
         BoxLayout:
             orientation: "horizontal"
             size_hint_y: None
-            height: "16dp"
+            height: "14dp"
             spacing: "4dp"
 
             MDLabel:
@@ -121,20 +165,20 @@
 
             MDLabel:
                 text: root.progress_status
-                color: 0.545, 0.545, 0.663, 1
+                color: 0.408, 0.408, 0.627, 1
                 font_size: "10sp"
                 size_hint_x: None
-                width: "80dp"
+                width: "90dp"
                 halign: "right"
                 shorten: True
 
-        # Bar
+        # Progress bar
         Widget:
             size_hint_y: None
             height: "5dp"
             canvas:
                 Color:
-                    rgba: 0.176, 0.176, 0.29, 0.4
+                    rgba: 0.176, 0.176, 0.29, 0.25
                 RoundedRectangle:
                     pos: self.pos
                     size: self.size
@@ -143,53 +187,154 @@
                     rgba: (0.357, 0.604, 0.42, 1) if root.total_count > 0 and root.completed_count >= root.total_count else (0.29, 0.435, 0.647, 1)
                 RoundedRectangle:
                     pos: self.pos
-                    size: [self.width * min(1.0, root.completed_count / max(1, root.total_count)), self.height]
+                    size: [max(5, self.width * min(1.0, root.completed_count / max(1, root.total_count))), self.height]
                     radius: [2.5]
 
-        # Stats row
+        # Stat counters (as elevated mini cards)
         BoxLayout:
             orientation: "horizontal"
             size_hint_y: None
-            height: "18dp"
-            spacing: "8dp"
+            height: "36dp"
+            spacing: "6dp"
 
-            MDLabel:
-                text: f"Done: {int(root.completed_count)}"
-                color: 0.357, 0.604, 0.42, 0.8
-                font_size: "10sp"
+            # Done card
+            BoxLayout:
+                orientation: "vertical"
                 size_hint_x: 0.33
+                spacing: "1dp"
+                canvas:
+                    Color:
+                        rgba: 0.102, 0.102, 0.18, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [6]
+                    Color:
+                        rgba: 0.357, 0.604, 0.42, 0.12
+                    Line:
+                        width: 1
+                        rounded_rectangle: [self.x, self.y, self.width, self.height, 6, 6]
 
-            MDLabel:
-                text: f"Remaining: {int(root.total_count - root.completed_count)}"
-                color: 0.545, 0.545, 0.663, 1
-                font_size: "10sp"
+                Widget:
+                    size_hint_y: None
+                    height: "4dp"
+
+                MDLabel:
+                    text: str(int(root.completed_count))
+                    color: 0.357, 0.604, 0.42, 1
+                    font_size: "18sp"
+                    bold: True
+                    halign: "center"
+                    size_hint_y: None
+                    height: "22dp"
+
+                MDLabel:
+                    text: "Done"
+                    color: 0.357, 0.604, 0.42, 0.4
+                    font_size: "9sp"
+                    halign: "center"
+                    size_hint_y: None
+                    height: "10dp"
+
+            # Remaining card
+            BoxLayout:
+                orientation: "vertical"
                 size_hint_x: 0.33
-                halign: "center"
+                spacing: "1dp"
+                canvas:
+                    Color:
+                        rgba: 0.102, 0.102, 0.18, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [6]
+                    Color:
+                        rgba: 0.29, 0.435, 0.647, 0.12
+                    Line:
+                        width: 1
+                        rounded_rectangle: [self.x, self.y, self.width, self.height, 6, 6]
 
-            MDLabel:
-                text: f"Focus: {root.focus_time_display}"
-                color: 0.545, 0.545, 0.663, 1
-                font_size: "10sp"
+                Widget:
+                    size_hint_y: None
+                    height: "4dp"
+
+                MDLabel:
+                    text: str(int(max(0, root.total_count - root.completed_count)))
+                    color: 0.29, 0.435, 0.647, 1
+                    font_size: "18sp"
+                    bold: True
+                    halign: "center"
+                    size_hint_y: None
+                    height: "22dp"
+
+                MDLabel:
+                    text: "Remaining"
+                    color: 0.29, 0.435, 0.647, 0.4
+                    font_size: "9sp"
+                    halign: "center"
+                    size_hint_y: None
+                    height: "10dp"
+
+            # Focus card
+            BoxLayout:
+                orientation: "vertical"
                 size_hint_x: 0.34
-                halign: "right"
+                spacing: "1dp"
+                canvas:
+                    Color:
+                        rgba: 0.102, 0.102, 0.18, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [6]
+                    Color:
+                        rgba: 0.408, 0.408, 0.627, 0.1
+                    Line:
+                        width: 1
+                        rounded_rectangle: [self.x, self.y, self.width, self.height, 6, 6]
 
-    # ── Subdued Divider ────────────────────────────────────────────
+                Widget:
+                    size_hint_y: None
+                    height: "4dp"
+
+                MDLabel:
+                    text: root.focus_time_display
+                    color: 0.408, 0.408, 0.627, 1
+                    font_size: "18sp"
+                    bold: True
+                    halign: "center"
+                    size_hint_y: None
+                    height: "22dp"
+
+                MDLabel:
+                    text: "Focus"
+                    color: 0.408, 0.408, 0.627, 0.4
+                    font_size: "9sp"
+                    halign: "center"
+                    size_hint_y: None
+                    height: "10dp"
+
+    # ── Thin divider ─────────────────────────────────────────────────
     Widget:
         size_hint_y: None
         height: "1dp"
         canvas:
             Color:
-                rgba: 0.176, 0.176, 0.29, 0.2
+                rgba: 0.176, 0.176, 0.29, 0.1
             Rectangle:
                 pos: self.pos
                 size: self.size
 
-    # ── Next Up ────────────────────────────────────────────────────
+    Widget:
+        size_hint_y: None
+        height: "8dp"
+
+    # ── NEXT UP ─────────────────────────────────────────────────────
     BoxLayout:
         orientation: "vertical"
         size_hint_y: None
-        height: "36dp"
-        spacing: "2dp"
+        height: "34dp"
+        spacing: "4dp"
 
         MDLabel:
             text: "NEXT UP"
@@ -201,35 +346,36 @@
 
         MDLabel:
             text: root.next_task_title if root.next_task_title else "—"
-            color: (0.545, 0.545, 0.663, 1) if root.next_task_title else (0.353, 0.353, 0.502, 1)
+            color: (0.408, 0.408, 0.627, 1) if root.next_task_title else (0.29, 0.29, 0.47, 1)
             font_size: "12sp"
             italic: not root.next_task_title
             shorten: True
             size_hint_y: None
-            height: "18dp"
+            height: "16dp"
 
-    # ── Spacer ─────────────────────────────────────────────────────
+    # ── Spacer ───────────────────────────────────────────────────────
     Widget:
+        size_hint_y: 0.2
 
-    # ── Action Buttons (compact, close to content) ─────────────────
+    # ── ACTION BUTTONS ──────────────────────────────────────────────
     BoxLayout:
         orientation: "vertical"
         size_hint_y: None
-        height: "160dp"
+        height: "150dp"
         spacing: "6dp"
 
-        # Complete — PRIMARY
+        # Complete — PRIMARY (filled blue)
         MDButton:
             style: "filled"
             disabled: root.panel_state not in ("working",)
             on_release: root.on_complete()
             size_hint_y: None
             height: "40dp"
-            md_bg_color: (0.29, 0.435, 0.647, 0.2) if root.panel_state not in ("working",) else (0.29, 0.435, 0.647, 1)
+            md_bg_color: (0.29, 0.435, 0.647, 0.12) if root.panel_state not in ("working",) else (0.29, 0.435, 0.647, 1)
             radius: [8]
             MDButtonText:
                 text: "✓  Complete Task"
-                color: (1, 1, 1, 0.3) if root.panel_state not in ("working",) else (1, 1, 1, 1)
+                color: (1, 1, 1, 0.15) if root.panel_state not in ("working",) else (1, 1, 1, 1)
                 font_size: "13sp"
 
         # Pause — SECONDARY
@@ -239,11 +385,11 @@
             on_release: root.on_pause()
             size_hint_y: None
             height: "34dp"
-            md_bg_color: (0.176, 0.176, 0.29, 0.2) if root.panel_state in ("working",) else (0.176, 0.176, 0.29, 0.05)
+            md_bg_color: (0.176, 0.176, 0.29, 0.15) if root.panel_state in ("working",) else (0.176, 0.176, 0.29, 0.04)
             radius: [6]
             MDButtonText:
                 text: "II  Pause"
-                color: (0.545, 0.545, 0.663, 0.25) if root.panel_state not in ("working",) else (0.545, 0.545, 0.663, 1)
+                color: (0.408, 0.408, 0.627, 0.15) if root.panel_state not in ("working",) else (0.408, 0.408, 0.627, 1)
                 font_size: "12sp"
 
         # Start Break — TERTIARY
@@ -253,25 +399,25 @@
             on_release: root.on_start_break()
             size_hint_y: None
             height: "34dp"
-            md_bg_color: (0.176, 0.176, 0.29, 0.2) if root.panel_state in ("working",) else (0.176, 0.176, 0.29, 0.05)
+            md_bg_color: (0.176, 0.176, 0.29, 0.1) if root.panel_state in ("working",) else (0.176, 0.176, 0.29, 0.03)
             radius: [6]
             MDButtonText:
                 text: "☕  Start Break"
-                color: (0.545, 0.545, 0.663, 0.25) if root.panel_state not in ("working",) else (0.545, 0.545, 0.663, 1)
+                color: (0.408, 0.408, 0.627, 0.15) if root.panel_state not in ("working",) else (0.408, 0.408, 0.627, 1)
                 font_size: "12sp"
 
-        # Resume — BREAK PRIMARY
+        # Resume — BREAK PRIMARY (green filled)
         MDButton:
             style: "filled"
             disabled: root.panel_state not in ("break",)
             on_release: root.on_resume()
             size_hint_y: None
             height: "40dp"
-            md_bg_color: (0.357, 0.604, 0.42, 0.15) if root.panel_state not in ("break",) else (0.357, 0.604, 0.42, 1)
+            md_bg_color: (0.357, 0.604, 0.42, 0.1) if root.panel_state not in ("break",) else (0.357, 0.604, 0.42, 1)
             radius: [8]
             MDButtonText:
                 text: "▶  Resume Work"
-                color: (1, 1, 1, 0.3) if root.panel_state not in ("break",) else (1, 1, 1, 1)
+                color: (1, 1, 1, 0.15) if root.panel_state not in ("break",) else (1, 1, 1, 1)
                 font_size: "13sp"
 
         # End Break — BREAK SECONDARY
@@ -281,9 +427,9 @@
             on_release: root.on_end_break()
             size_hint_y: None
             height: "34dp"
-            md_bg_color: (0.176, 0.176, 0.29, 0.15) if root.panel_state in ("break",) else (0.176, 0.176, 0.29, 0.05)
+            md_bg_color: (0.176, 0.176, 0.29, 0.1) if root.panel_state in ("break",) else (0.176, 0.176, 0.29, 0.03)
             radius: [6]
             MDButtonText:
                 text: "■  End Break"
-                color: (0.545, 0.545, 0.663, 0.25) if root.panel_state not in ("break",) else (0.545, 0.545, 0.663, 1)
+                color: (0.408, 0.408, 0.627, 0.15) if root.panel_state not in ("break",) else (0.408, 0.408, 0.627, 1)
                 font_size: "12sp"

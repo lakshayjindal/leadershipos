@@ -227,6 +227,11 @@ class LeadershipOSApp(MDApp):
         # Start periodic update tick (1x per second for timer, 5x for progress)
         Clock.schedule_interval(self._ui_tick, 1.0)
 
+        # Set the date label
+        from datetime import date
+        today = date.today()
+        main.ids.date_label.text = today.strftime("Today, %B %d")
+
         logger.info("Leadership OS UI ready — engines wired")
 
     def _on_app_state_changed(self, event: str, data: dict) -> None:
@@ -293,6 +298,7 @@ class LeadershipOSApp(MDApp):
             status_bar.update_completed(completed)
 
             # Update focus card
+            focus_card = main.ids.focus_card
             focus_title = main.ids.focus_task_title
             focus_time = main.ids.focus_time_badge
             if active_task_id:
@@ -302,20 +308,30 @@ class LeadershipOSApp(MDApp):
                     focus_time.text = format_duration_short(
                         self.timer_engine.get_elapsed(active_task_id)
                     )
-                main.ids.focus_card.opacity = 1
-                main.ids.focus_card.disabled = False
+                focus_card.height = "56dp"
+                focus_card.opacity = 1
+                focus_card.disabled = False
             else:
                 focus_title.text = "No active task"
                 focus_time.text = "00:00"
-                main.ids.focus_card.opacity = 0
-                main.ids.focus_card.disabled = True
+                focus_card.height = "0dp"
+                focus_card.opacity = 0
+                focus_card.disabled = True
 
             # Update visibility of empty state and section labels
-            main.ids.empty_state_label.opacity = 0.6 if total == 0 else 0
-            main.ids.empty_state_label.height = "20dp" if total == 0 else "0dp"
-            main.ids.section_pending_label.opacity = 1 if total > 0 else 0
-            main.ids.section_completed_label.opacity = 0.6 if completed > 0 else 0
-            main.ids.section_completed_label.height = "16dp" if completed > 0 else "0dp"
+            has_tasks = total > 0
+            has_completed = completed > 0
+            main.ids.empty_state_box.height = "196dp" if not has_tasks else "0dp"
+            main.ids.empty_state_box.opacity = 1 if not has_tasks else 0
+            main.ids.empty_state_box.disabled = has_tasks
+            main.ids.section_pending_header.height = "20dp" if has_tasks else "0dp"
+            main.ids.section_pending_header.opacity = 1 if has_tasks else 0
+            main.ids.section_completed_header.height = "20dp" if has_completed else "0dp"
+            main.ids.section_completed_header.opacity = 0.6 if has_completed else 0
+            main.ids.section_completed_header.disabled = not has_completed
+
+            # Update section divider visibility
+            # Divider is before the task section headers
 
         except Exception as e:
             logger.debug("UI tick error: %s", e)

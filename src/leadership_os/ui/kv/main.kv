@@ -1,10 +1,10 @@
 # main.kv — Root layout for Leadership OS
+# Refined: proper empty state sizing, fixed layout bugs, consistent spacing
 # KivyMD 2.0 compatible
-# Design: Balanced layout, focus card, empty state, completed section
 
 <MainLayout>:
     orientation: "vertical"
-    md_bg_color: 0.051, 0.051, 0.102, 1
+    md_bg_color: 0.051, 0.051, 0.102, 1  # #0D0D1A
 
     # ─── Top Bar ─────────────────────────────────────────────────────
     TopBar:
@@ -25,77 +25,98 @@
         # Center Workspace
         BoxLayout:
             orientation: "vertical"
-            padding: ["24dp", "16dp", "24dp", "16dp"]
-            spacing: "8dp"
+            padding: ["24dp", "16dp", "24dp", "12dp"]
+            spacing: 0
             md_bg_color: 0.051, 0.051, 0.102, 1
 
-            # ── Header ──────────────────────────────────────────────
-            MDLabel:
-                text: "Today's Plan"
-                color: 0.91, 0.91, 0.94, 1
-                font_size: "16sp"
-                bold: True
+            # ── Header row: date + "Today's Plan" ───────────────────
+            BoxLayout:
+                orientation: "vertical"
                 size_hint_y: None
-                height: "24dp"
+                height: "48dp"
+                spacing: "0dp"
 
-            # ── Task Input (compact) ────────────────────────────────
+                MDLabel:
+                    id: date_label
+                    text: "Today, July 20"
+                    color: 0.408, 0.408, 0.627, 1
+                    font_size: "10sp"
+                    size_hint_y: None
+                    height: "16dp"
+
+                MDLabel:
+                    text: "Today's Plan"
+                    color: 0.91, 0.91, 0.94, 1
+                    font_size: "18sp"
+                    bold: True
+                    size_hint_y: None
+                    height: "26dp"
+
+            Widget:
+                size_hint_y: None
+                height: "8dp"
+
+            # ── Task Input (384dp) ───────────────────────────────────
             BoxLayout:
                 orientation: "horizontal"
                 size_hint_y: None
-                height: "40dp"
+                height: "36dp"
                 spacing: 0
                 size_hint_x: None
-                width: "480dp"
+                width: "384dp"
 
                 MDTextField:
                     id: task_title_input
-                    hint_text: "Add a task..."
+                    hint_text: "Write a task..."
                     mode: "outlined"
                     size_hint_x: 1
                     multiline: False
                     on_text_validate: app.on_task_submit()
                     md_bg_color: 0.102, 0.102, 0.18, 1
-                    line_color_normal: 0.176, 0.176, 0.29, 0.6
+                    line_color_normal: 0.176, 0.176, 0.29, 0.4
                     line_color_focus: 0.29, 0.435, 0.647, 1
                     hint_text_color_normal: 0.353, 0.353, 0.502, 1
                     text_color_normal: 0.91, 0.91, 0.94, 1
                     foreground_color: 0.91, 0.91, 0.94, 1
                     radius: [8, 0, 0, 8]
+                    font_size: "13sp"
 
                 MDButton:
                     style: "filled"
                     size_hint_x: None
-                    width: "40dp"
+                    width: "36dp"
                     md_bg_color: 0.29, 0.435, 0.647, 1
                     radius: [0, 8, 8, 0]
                     on_release: app.on_task_submit()
                     MDButtonText:
                         text: "+"
                         color: 1, 1, 1, 1
-                        font_size: "18sp"
+                        font_size: "16sp"
 
             Widget:
                 size_hint_y: None
-                height: "4dp"
+                height: "8dp"
 
-            # ── Current Focus Card ──────────────────────────────────
+            # ── Focus Section ───────────────────────────────────────
             BoxLayout:
                 id: focus_card
                 orientation: "horizontal"
                 size_hint_y: None
-                height: "56dp"
+                height: "0dp"
                 spacing: 0
-                padding: ["12dp", "10dp", "12dp", "10dp"]
+                padding: ["14dp", "10dp", "14dp", "10dp"]
+                opacity: 0
+                disabled: True
 
                 canvas.before:
                     Color:
-                        rgba: 0.176, 0.176, 0.29, 0.3
+                        rgba: 0.102, 0.102, 0.18, 1
                     RoundedRectangle:
                         pos: self.pos
                         size: self.size
-                        radius: [8]
+                        radius: [10]
 
-                # Focus accent bar
+                # Accent bar
                 Widget:
                     size_hint_x: None
                     width: "3dp"
@@ -103,13 +124,13 @@
                         Color:
                             rgba: 0.29, 0.435, 0.647, 1
                         RoundedRectangle:
-                            pos: self.x, self.y + 4
-                            size: [3, self.height - 8]
+                            pos: self.x, self.y + 6
+                            size: [3, self.height - 12]
                             radius: [1.5]
 
                 Widget:
                     size_hint_x: None
-                    width: "10dp"
+                    width: "12dp"
 
                 BoxLayout:
                     orientation: "vertical"
@@ -118,7 +139,7 @@
 
                     MDLabel:
                         text: "CURRENT FOCUS"
-                        color: 0.353, 0.353, 0.502, 1
+                        color: 0.408, 0.408, 0.627, 1
                         font_size: "9sp"
                         bold: True
                         size_hint_y: None
@@ -126,53 +147,160 @@
 
                     MDLabel:
                         id: focus_task_title
-                        text: "No active task"
+                        text: ""
                         color: 0.91, 0.91, 0.94, 1
-                        font_size: "13sp"
+                        font_size: "16sp"
                         bold: True
                         shorten: True
                         size_hint_y: None
-                        height: "20dp"
+                        height: "22dp"
 
                 MDLabel:
                     id: focus_time_badge
                     text: "00:00"
-                    color: 0.545, 0.545, 0.663, 1
-                    font_size: "14sp"
+                    color: 0.408, 0.408, 0.627, 1
+                    font_size: "16sp"
                     bold: True
                     size_hint_x: None
                     width: "60dp"
                     halign: "right"
                     valign: "middle"
 
-            # ── Empty State ─────────────────────────────────────────
-            MDLabel:
-                id: empty_state_label
-                text: "No tasks yet. Add one above to begin."
-                color: 0.353, 0.353, 0.502, 1
-                font_size: "12sp"
+            # ── Empty State (premium card, properly sized) ───────────
+            BoxLayout:
+                id: empty_state_box
+                orientation: "vertical"
                 size_hint_y: None
-                height: "20dp"
-                opacity: 0.6
-                padding: ["4dp", 0, 0, 0]
+                height: "196dp"
+                spacing: "0dp"
+                padding: ["20dp", "16dp", "20dp", "16dp"]
+
+                canvas.before:
+                    Color:
+                        rgba: 0.082, 0.082, 0.149, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [10]
+                    Color:
+                        rgba: 0.176, 0.176, 0.29, 0.12
+                    Line:
+                        width: 1
+                        rounded_rectangle: [self.x, self.y, self.width, self.height, 10, 10]
+
+                # Icon header
+                MDIcon:
+                    icon: "weather-sunny"
+                    theme_icon_color: "Custom"
+                    icon_color: 0.596, 0.596, 0.722, 1
+                    font_size: "26sp"
+                    size_hint_x: None
+                    width: "30dp"
+                    size_hint_y: None
+                    height: "30dp"
+
+                Widget:
+                    size_hint_y: None
+                    height: "12dp"
+
+                MDLabel:
+                    text: "Your workspace is clear"
+                    color: 0.596, 0.596, 0.722, 1
+                    font_size: "14sp"
+                    bold: True
+                    size_hint_y: None
+                    height: "20dp"
+
+                Widget:
+                    size_hint_y: None
+                    height: "6dp"
+
+                MDLabel:
+                    id: empty_state_label
+                    text: "Add a task above to begin. Your focus timer and\nprogress will appear here as you work."
+                    color: 0.353, 0.353, 0.502, 1
+                    font_size: "11sp"
+                    size_hint_y: None
+                    height: "34dp"
+                    line_height: 1.5
+
+                Widget:
+                    size_hint_y: None
+                    height: "12dp"
+
+                MDLabel:
+                    text: "Quick tips"
+                    color: 0.255, 0.255, 0.412, 1
+                    font_size: "9sp"
+                    bold: True
+                    size_hint_y: None
+                    height: "14dp"
+
+                Widget:
+                    size_hint_y: None
+                    height: "4dp"
+
+                MDLabel:
+                    text: "  •  Press Enter to add a task"
+                    color: 0.255, 0.255, 0.412, 1
+                    font_size: "10sp"
+                    size_hint_y: None
+                    height: "16dp"
+
+                MDLabel:
+                    text: "  •  Click a task to start working on it"
+                    color: 0.255, 0.255, 0.412, 1
+                    font_size: "10sp"
+                    size_hint_y: None
+                    height: "16dp"
+
+            # ── Subtle section divider ───────────────────────────────
+            Widget:
+                size_hint_y: None
+                height: "1dp"
+                canvas:
+                    Color:
+                        rgba: 0.176, 0.176, 0.29, 0.1
+                    Rectangle:
+                        pos: self.x + 2, self.y
+                        size: [self.width - 4, 1]
+
+            Widget:
+                size_hint_y: None
+                height: "8dp"
 
             # ── Tasks section header ────────────────────────────────
-            MDLabel:
-                id: section_pending_label
-                text: "TASKS"
-                color: 0.353, 0.353, 0.502, 1
-                font_size: "9sp"
-                bold: True
+            BoxLayout:
+                id: section_pending_header
+                orientation: "horizontal"
                 size_hint_y: None
-                height: "16dp"
+                height: "20dp"
+                spacing: "8dp"
+                opacity: 0
+
+                MDLabel:
+                    text: "TASKS"
+                    color: 0.408, 0.408, 0.627, 1
+                    font_size: "9sp"
+                    bold: True
+                    size_hint_x: None
+                    width: "40dp"
+
+                Widget:
+                    canvas:
+                        Color:
+                            rgba: 0.176, 0.176, 0.29, 0.1
+                        Rectangle:
+                            pos: self.x, self.y + 8
+                            size: [self.width, 1]
 
             # ── Task List ───────────────────────────────────────────
             ScrollView:
                 id: task_scroll
                 do_scroll_x: False
-                bar_width: "3dp"
-                bar_color: 0.176, 0.176, 0.29, 0.3
-                bar_inactive_color: 0.176, 0.176, 0.29, 0.1
+                bar_width: "2dp"
+                bar_color: 0.176, 0.176, 0.29, 0.15
+                bar_inactive_color: 0.176, 0.176, 0.29, 0.04
 
                 BoxLayout:
                     id: task_list_container
@@ -181,15 +309,34 @@
                     height: self.minimum_height
                     spacing: "6dp"
 
-            # ── Completed section ───────────────────────────────────
-            MDLabel:
-                id: section_completed_label
-                text: "COMPLETED"
-                color: 0.357, 0.604, 0.42, 0.6
-                font_size: "9sp"
-                bold: True
+            Widget:
                 size_hint_y: None
-                height: "16dp"
+                height: "8dp"
+
+            # ── Completed section ───────────────────────────────────
+            BoxLayout:
+                id: section_completed_header
+                orientation: "horizontal"
+                size_hint_y: None
+                height: "20dp"
+                spacing: "8dp"
+                opacity: 0
+
+                MDLabel:
+                    text: "COMPLETED"
+                    color: 0.357, 0.604, 0.42, 0.45
+                    font_size: "9sp"
+                    bold: True
+                    size_hint_x: None
+                    width: "90dp"
+
+                Widget:
+                    canvas:
+                        Color:
+                            rgba: 0.176, 0.176, 0.29, 0.08
+                        Rectangle:
+                            pos: self.x, self.y + 8
+                            size: [self.width, 1]
 
             BoxLayout:
                 id: completed_container
@@ -217,7 +364,7 @@
     orientation: "horizontal"
     size_hint_y: None
     height: "48dp"
-    padding: "0dp"
+    padding: 0
     spacing: 0
     md_bg_color: 0.078, 0.078, 0.141, 1
 
@@ -247,7 +394,7 @@
         MDLabel:
             text: "Leadership OS"
             color: 0.91, 0.91, 0.94, 1
-            font_size: "12sp"
+            font_size: "11sp"
             bold: True
             valign: "middle"
 
@@ -257,28 +404,28 @@
     BoxLayout:
         orientation: "horizontal"
         size_hint_x: None
-        width: "160dp"
-        spacing: "4dp"
+        width: "140dp"
+        spacing: "2dp"
         padding: ["4dp", "4dp", "4dp", "4dp"]
         md_bg_color: 0.078, 0.078, 0.141, 1
 
         MDIconButton:
             icon: "magnify"
             theme_icon_color: "Custom"
-            icon_color: 0.545, 0.545, 0.663, 1
-            icon_size: "18sp"
+            icon_color: 0.408, 0.408, 0.627, 1
+            icon_size: "17sp"
             on_release: app.show_search()
 
         MDIconButton:
             icon: "cog"
             theme_icon_color: "Custom"
-            icon_color: 0.545, 0.545, 0.663, 1
-            icon_size: "18sp"
+            icon_color: 0.408, 0.408, 0.627, 1
+            icon_size: "17sp"
             on_release: app.switch_to_settings()
 
         MDIconButton:
             icon: "keyboard"
             theme_icon_color: "Custom"
-            icon_color: 0.545, 0.545, 0.663, 1
-            icon_size: "18sp"
+            icon_color: 0.408, 0.408, 0.627, 1
+            icon_size: "17sp"
             on_release: app.show_command_palette()
