@@ -1,5 +1,6 @@
 # main.kv — Root layout for Leadership OS
-# Refined: proper empty state sizing, fixed layout bugs, consistent spacing
+# Refined: improved text contrast (0.255→0.353, 0.353→0.455, 0.408→0.502),
+#           TopBar brand width 160dp to match sidebar
 # KivyMD 2.0 compatible
 
 <MainLayout>:
@@ -29,41 +30,40 @@
             spacing: 0
             md_bg_color: 0.051, 0.051, 0.102, 1
 
-            # ── Header row: date + "Today's Plan" ───────────────────
-            BoxLayout:
-                orientation: "vertical"
+            # ── Date ───────────────────────────────────────────────
+            MDLabel:
+                id: date_label
+                text: "Today, July 20"
+                color: 0.353, 0.353, 0.502, 1
+                font_size: "9sp"
                 size_hint_y: None
-                height: "48dp"
-                spacing: "0dp"
-
-                MDLabel:
-                    id: date_label
-                    text: "Today, July 20"
-                    color: 0.408, 0.408, 0.627, 1
-                    font_size: "10sp"
-                    size_hint_y: None
-                    height: "16dp"
-
-                MDLabel:
-                    text: "Today's Plan"
-                    color: 0.91, 0.91, 0.94, 1
-                    font_size: "18sp"
-                    bold: True
-                    size_hint_y: None
-                    height: "26dp"
+                height: "14dp"
 
             Widget:
                 size_hint_y: None
-                height: "8dp"
+                height: "4dp"
 
-            # ── Task Input (384dp) ───────────────────────────────────
+            # ── "Today's Plan" label ───────────────────────────────
+            MDLabel:
+                text: "Today's Plan"
+                color: 0.91, 0.91, 0.94, 1
+                font_size: "18sp"
+                bold: True
+                size_hint_y: None
+                height: "26dp"
+
+            Widget:
+                size_hint_y: None
+                height: "12dp"
+
+            # ── Task Input (320dp, label clearly above) ────────────
             BoxLayout:
                 orientation: "horizontal"
                 size_hint_y: None
                 height: "36dp"
                 spacing: 0
                 size_hint_x: None
-                width: "384dp"
+                width: "320dp"
 
                 MDTextField:
                     id: task_title_input
@@ -75,7 +75,7 @@
                     md_bg_color: 0.102, 0.102, 0.18, 1
                     line_color_normal: 0.176, 0.176, 0.29, 0.4
                     line_color_focus: 0.29, 0.435, 0.647, 1
-                    hint_text_color_normal: 0.353, 0.353, 0.502, 1
+                    hint_text_color_normal: 0.455, 0.455, 0.6, 1
                     text_color_normal: 0.91, 0.91, 0.94, 1
                     foreground_color: 0.91, 0.91, 0.94, 1
                     radius: [8, 0, 0, 8]
@@ -139,7 +139,7 @@
 
                     MDLabel:
                         text: "CURRENT FOCUS"
-                        color: 0.408, 0.408, 0.627, 1
+                        color: 0.502, 0.502, 0.722, 1
                         font_size: "9sp"
                         bold: True
                         size_hint_y: None
@@ -158,7 +158,7 @@
                 MDLabel:
                     id: focus_time_badge
                     text: "00:00"
-                    color: 0.408, 0.408, 0.627, 1
+                    color: 0.502, 0.502, 0.722, 1
                     font_size: "16sp"
                     bold: True
                     size_hint_x: None
@@ -166,7 +166,7 @@
                     halign: "right"
                     valign: "middle"
 
-            # ── Empty State (premium card, properly sized) ───────────
+            # ── Empty State (premium card) ───────────────────────────
             BoxLayout:
                 id: empty_state_box
                 orientation: "vertical"
@@ -217,8 +217,8 @@
 
                 MDLabel:
                     id: empty_state_label
-                    text: "Add a task above to begin. Your focus timer and\nprogress will appear here as you work."
-                    color: 0.353, 0.353, 0.502, 1
+                    text: "Add a task above to begin. Your focus timer and\\nprogress will appear here as you work."
+                    color: 0.455, 0.455, 0.6, 1
                     font_size: "11sp"
                     size_hint_y: None
                     height: "34dp"
@@ -230,7 +230,7 @@
 
                 MDLabel:
                     text: "Quick tips"
-                    color: 0.255, 0.255, 0.412, 1
+                    color: 0.353, 0.353, 0.502, 1
                     font_size: "9sp"
                     bold: True
                     size_hint_y: None
@@ -242,14 +242,14 @@
 
                 MDLabel:
                     text: "  •  Press Enter to add a task"
-                    color: 0.255, 0.255, 0.412, 1
+                    color: 0.353, 0.353, 0.502, 1
                     font_size: "10sp"
                     size_hint_y: None
                     height: "16dp"
 
                 MDLabel:
                     text: "  •  Click a task to start working on it"
-                    color: 0.255, 0.255, 0.412, 1
+                    color: 0.353, 0.353, 0.502, 1
                     font_size: "10sp"
                     size_hint_y: None
                     height: "16dp"
@@ -260,7 +260,7 @@
                 height: "1dp"
                 canvas:
                     Color:
-                        rgba: 0.176, 0.176, 0.29, 0.1
+                        rgba: 0.176, 0.176, 0.29, 0.08
                     Rectangle:
                         pos: self.x + 2, self.y
                         size: [self.width - 4, 1]
@@ -280,7 +280,7 @@
 
                 MDLabel:
                     text: "TASKS"
-                    color: 0.408, 0.408, 0.627, 1
+                    color: 0.502, 0.502, 0.722, 1
                     font_size: "9sp"
                     bold: True
                     size_hint_x: None
@@ -289,7 +289,7 @@
                 Widget:
                     canvas:
                         Color:
-                            rgba: 0.176, 0.176, 0.29, 0.1
+                            rgba: 0.176, 0.176, 0.29, 0.08
                         Rectangle:
                             pos: self.x, self.y + 8
                             size: [self.width, 1]
@@ -299,8 +299,8 @@
                 id: task_scroll
                 do_scroll_x: False
                 bar_width: "2dp"
-                bar_color: 0.176, 0.176, 0.29, 0.15
-                bar_inactive_color: 0.176, 0.176, 0.29, 0.04
+                bar_color: 0.176, 0.176, 0.29, 0.1
+                bar_inactive_color: 0.176, 0.176, 0.29, 0.03
 
                 BoxLayout:
                     id: task_list_container
@@ -324,7 +324,7 @@
 
                 MDLabel:
                     text: "COMPLETED"
-                    color: 0.357, 0.604, 0.42, 0.45
+                    color: 0.4, 0.65, 0.45, 0.55
                     font_size: "9sp"
                     bold: True
                     size_hint_x: None
@@ -333,7 +333,7 @@
                 Widget:
                     canvas:
                         Color:
-                            rgba: 0.176, 0.176, 0.29, 0.08
+                            rgba: 0.176, 0.176, 0.29, 0.05
                         Rectangle:
                             pos: self.x, self.y + 8
                             size: [self.width, 1]
@@ -372,7 +372,7 @@
     BoxLayout:
         orientation: "horizontal"
         size_hint_x: None
-        width: "180dp"
+        width: "160dp"
         padding: 0
         spacing: 0
         md_bg_color: 0.078, 0.078, 0.141, 1
@@ -412,20 +412,20 @@
         MDIconButton:
             icon: "magnify"
             theme_icon_color: "Custom"
-            icon_color: 0.408, 0.408, 0.627, 1
+            icon_color: 0.502, 0.502, 0.722, 1
             icon_size: "17sp"
             on_release: app.show_search()
 
         MDIconButton:
             icon: "cog"
             theme_icon_color: "Custom"
-            icon_color: 0.408, 0.408, 0.627, 1
+            icon_color: 0.502, 0.502, 0.722, 1
             icon_size: "17sp"
             on_release: app.switch_to_settings()
 
         MDIconButton:
             icon: "keyboard"
             theme_icon_color: "Custom"
-            icon_color: 0.408, 0.408, 0.627, 1
+            icon_color: 0.502, 0.502, 0.722, 1
             icon_size: "17sp"
             on_release: app.show_command_palette()

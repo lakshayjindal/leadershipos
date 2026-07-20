@@ -55,6 +55,7 @@ class Sidebar(BoxLayout):
     focus_time = NumericProperty(0)
     completed_count = NumericProperty(0)
     total_count = NumericProperty(0)
+    status_text = StringProperty("Ready")
 
     # Callbacks (no 'on_' prefix — Kivy reserves on_X for event bindings)
     today_callback = ObjectProperty(lambda: None)
@@ -68,6 +69,19 @@ class Sidebar(BoxLayout):
     def _update_info(self, dt: float) -> None:
         """Periodically update session info display."""
         pass  # Will be wired to engines in Phase 4+
+
+    def on_app_state(self, instance, value: str) -> None:
+        """Update status_text when app_state changes."""
+        if value in ("planning", "idle", "startup"):
+            self.status_text = "Ready"
+        elif value == "working":
+            self.status_text = "Focusing"
+        elif value == "break":
+            self.status_text = "On Break"
+        elif value == "review":
+            self.status_text = "Reviewing"
+        else:
+            self.status_text = "Ready"
 
     @property
     def focus_display(self) -> str:

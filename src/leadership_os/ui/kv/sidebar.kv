@@ -1,11 +1,12 @@
 # Sidebar — Left navigation panel
-# Refined: compact nav, clean alignment, session bottom card
+# Refined: improved contrast (0.255→0.353, 0.353→0.455, 0.408→0.502),
+#           narrower 160dp width for responsiveness
 # KivyMD 2.0 compatible
 
 <Sidebar>:
     orientation: "vertical"
     size_hint_x: None
-    width: "180dp"
+    width: "160dp"
     padding: ["8dp", "12dp", "8dp", "8dp"]
     spacing: "2dp"
     md_bg_color: 0.078, 0.078, 0.141, 1
@@ -13,7 +14,7 @@
     # Section label
     MDLabel:
         text: "NAVIGATION"
-        color: 0.353, 0.353, 0.502, 1
+        color: 0.455, 0.455, 0.6, 1
         font_size: "9sp"
         bold: True
         size_hint_y: None
@@ -44,6 +45,73 @@
             on_release: root.settings_callback()
 
     Widget:
+        size_hint_y: 0.1
+
+    # ── Focus Target (daily goal at a glance) ────────────────────────
+    BoxLayout:
+        orientation: "vertical"
+        size_hint_y: None
+        height: "60dp"
+        padding: ["10dp", "8dp", "10dp", "8dp"]
+        spacing: "4dp"
+
+        canvas.before:
+            Color:
+                rgba: 0.082, 0.082, 0.149, 1
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [8]
+
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: "14dp"
+            spacing: "4dp"
+
+            MDLabel:
+                text: "FOCUS TARGET"
+                color: 0.455, 0.455, 0.6, 1
+                font_size: "8sp"
+                bold: True
+                size_hint_x: 1
+
+            MDLabel:
+                text: root.focus_display
+                color: 0.502, 0.502, 0.722, 1
+                font_size: "10sp"
+                bold: True
+                size_hint_x: None
+                width: "50dp"
+                halign: "right"
+
+        # Mini progress
+        Widget:
+            size_hint_y: None
+            height: "3dp"
+            canvas:
+                Color:
+                    rgba: 0.176, 0.176, 0.29, 0.15
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [1.5]
+                Color:
+                    rgba: 0.29, 0.435, 0.647, 1
+                RoundedRectangle:
+                    pos: self.pos
+                    size: [max(3, self.width * min(1.0, root.completed_count / max(1, root.total_count))), self.height]
+                    radius: [1.5]
+
+        MDLabel:
+            text: str(int(root.completed_count)) + "/" + str(int(root.total_count)) + " tasks  ·  " + root.status_text
+            color: 0.353, 0.353, 0.502, 1
+            font_size: "9sp"
+            size_hint_y: None
+            height: "14dp"
+
+    Widget:
+        size_hint_y: 1
 
     # ── Session Stats (bottom card) ─────────────────────────────────
     BoxLayout:
@@ -63,7 +131,7 @@
 
         MDLabel:
             text: "TODAY"
-            color: 0.353, 0.353, 0.502, 1
+            color: 0.455, 0.455, 0.6, 1
             font_size: "9sp"
             bold: True
             size_hint_y: None
@@ -82,7 +150,7 @@
             height: "1dp"
             canvas:
                 Color:
-                    rgba: 0.176, 0.176, 0.29, 0.12
+                    rgba: 0.176, 0.176, 0.29, 0.1
                 Rectangle:
                     pos: self.pos
                     size: self.size
@@ -96,13 +164,13 @@
             MDLabel:
                 text: f"Focus {root.focus_display}"
                 font_size: "10sp"
-                color: 0.408, 0.408, 0.627, 1
+                color: 0.502, 0.502, 0.722, 1
                 size_hint_x: 0.5
 
             MDLabel:
                 text: f"Tasks {int(root.total_count)}"
                 font_size: "10sp"
-                color: 0.408, 0.408, 0.627, 1
+                color: 0.502, 0.502, 0.722, 1
                 size_hint_x: 0.5
                 halign: "right"
 
@@ -120,13 +188,13 @@
                 font_size: "6sp"
                 pos_hint: {"center_y": 0.5}
                 theme_icon_color: "Custom"
-                icon_color: (0.357, 0.604, 0.42, 1) if root.app_state == "working" else (0.29, 0.435, 0.647, 0.5) if root.app_state in ("planning", "idle", "startup") else (0.769, 0.357, 0.357, 1)
+                icon_color: (0.4, 0.65, 0.45, 1) if root.app_state == "working" else (0.29, 0.435, 0.647, 0.5) if root.app_state in ("planning", "idle", "startup") else (0.769, 0.357, 0.357, 1)
 
             MDLabel:
                 id: status_line
-                text: "Ready" if root.app_state in ("planning", "idle", "startup") else ("Focusing" if root.app_state == "working" else ("On Break" if root.app_state == "break" else "Reviewing"))
+                text: root.status_text
                 font_size: "10sp"
-                color: (0.91, 0.91, 0.94, 1) if root.app_state == "working" else (0.408, 0.408, 0.627, 1)
+                color: (0.91, 0.91, 0.94, 1) if root.app_state == "working" else (0.502, 0.502, 0.722, 1)
                 size_hint_y: None
                 height: "16dp"
                 bold: True if root.app_state == "working" else False
@@ -156,7 +224,7 @@
 
     MDIcon:
         icon: root.icon
-        color: (0.29, 0.435, 0.647, 1) if root.active else (0.408, 0.408, 0.627, 1)
+        color: (0.29, 0.435, 0.647, 1) if root.active else (0.502, 0.502, 0.722, 1)
         size_hint_x: None
         width: "18dp"
         font_size: "15sp"

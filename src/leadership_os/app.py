@@ -120,16 +120,19 @@ class LeadershipOSApp(MDApp):
         # 2. Initialize the theme for KivyMD 2.0
         theme.apply_to_app(self)
 
-        # 3. Initialize core services (KV files are loaded by individual widget modules)
+        # 3. Bind window resize for responsive layout
+        Window.bind(width=self._on_window_resize)
+
+        # 4. Initialize core services (KV files are loaded by individual widget modules)
         self._init_services()
 
-        # 4. Initialize engines
+        # 5. Initialize engines
         self._init_engines()
 
-        # 5. Run startup recovery
+        # 6. Run startup recovery
         self._run_startup()
 
-        # 6. Return the main layout
+        # 7. Return the main layout
         main = MainLayout()
         Clock.schedule_once(lambda dt: self._on_build_complete(main), 0)
         return main
@@ -233,6 +236,26 @@ class LeadershipOSApp(MDApp):
         main.ids.date_label.text = today.strftime("Today, %B %d")
 
         logger.info("Leadership OS UI ready — engines wired")
+
+    def _on_window_resize(self, window, width: float) -> None:
+        """Adjust panel widths responsively when the window is resized.
+
+        Execution panel adapts: 240dp on narrow windows (<1000px),
+        260dp on medium (1000-1200px), 280dp on wide (>1200px).
+        Sidebar remains at 160dp.
+        """
+        if not self.main_layout:
+            return
+        try:
+            panel = self.main_layout.ids.execution_panel
+            if width < 1000:
+                panel.width = "240dp"
+            elif width < 1200:
+                panel.width = "260dp"
+            else:
+                panel.width = "280dp"
+        except Exception as e:
+            logger.debug("Window resize error: %s", e)
 
     def _on_app_state_changed(self, event: str, data: dict) -> None:
         """React to application state changes."""

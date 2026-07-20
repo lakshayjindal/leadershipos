@@ -1,5 +1,5 @@
 # StatusBar — Bottom status bar
-# Simplified: Focus + Done stats, clean hairline top border, compact
+# Minimal: Focus + Done stats, subtle top hairline, compact 22dp
 
 <StatusBar>:
     orientation: "horizontal"
@@ -11,21 +11,21 @@
 
     canvas.before:
         Color:
-            rgba: 0.176, 0.176, 0.29, 0.25
+            rgba: 0.176, 0.176, 0.29, 0.2
         Line:
             width: 1
             points: [self.x, self.top - 0.5, self.right, self.top - 0.5]
 
     MDLabel:
         text: f"Focus {root.focus_time_display}"
-        color: 0.255, 0.255, 0.412, 1
+        color: 0.353, 0.353, 0.502, 1
         font_size: "9sp"
         size_hint_x: None
         width: "80dp"
 
     MDLabel:
         text: f"Done {root.completed_display}"
-        color: 0.255, 0.255, 0.412, 1
+        color: 0.353, 0.353, 0.502, 1
         font_size: "9sp"
         size_hint_x: None
         width: "70dp"
@@ -34,8 +34,8 @@
 
     MDLabel:
         text: root.hint_text
-        color: 0.176, 0.176, 0.29, 1
-        font_size: "9sp"
+        color: 0.176, 0.176, 0.29, 0.8
+        font_size: "8sp"
         size_hint_x: None
         width: "80dp"
         halign: "right"
