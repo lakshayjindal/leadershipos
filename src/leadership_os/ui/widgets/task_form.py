@@ -125,11 +125,10 @@ def build_task_form(
                         content="Cancel",
                         on_click=lambda _: on_cancel(),
                     ),
-                    ft.ElevatedButton(
-                        content="Save" if is_edit_mode else "Create",
+                    ft.Button(
+                        content=ft.Text("Save" if is_edit_mode else "Create", color="white"),
                         on_click=lambda _: on_submit(),
                         bgcolor="#4A6FA5",
-                        color="white",
                         style=ft.ButtonStyle(
                             shape=ft.RoundedRectangleBorder(radius=8),
                         ),

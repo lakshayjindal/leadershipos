@@ -17,26 +17,35 @@ class TestJournalGeneration:
     """Test the full journal generation flow."""
 
     def test_generate_journal_creates_file(
-        self, journal_engine: JournalEngine, db, sample_day: Day, sample_task: Task
+        self, journal_engine: JournalEngine, db
     ):
         """Test that generate_journal creates a Markdown file on disk."""
-        # Set a fixed date on the day for predictable output
-        sample_day.date = "2026-07-15"
-        sample_day.start_time = "2026-07-15T09:05:00"
-        sample_day.end_time = "2026-07-15T21:12:00"
-        db.update_day(sample_day)
+        # Create a fresh day with a fixed date for predictable output
+        from datetime import datetime
+        target_day = Day(
+            date="2026-07-15",
+            start_time="2026-07-15T09:05:00",
+            end_time="2026-07-15T21:12:00",
+            created_at=datetime.now().isoformat(),
+            updated_at=datetime.now().isoformat(),
+        )
+        db.create_day(target_day)
 
-        # Complete the task so we have data
-        sample_task.status = TaskStatus.COMPLETED.value
-        sample_task.completed_at = "2026-07-15T14:30:00"
-        sample_task.actual_seconds = 7200
-        db.update_task(sample_task)
+        # Create a completed task in the target day
+        task = Task(
+            day_id=target_day.id,
+            title="Completed Test Task",
+            status=TaskStatus.COMPLETED.value,
+            completed_at="2026-07-15T14:30:00",
+            actual_seconds=7200,
+        )
+        db.create_task(task)
 
-        summary = journal_engine.generate_journal(sample_day.id)
+        summary = journal_engine.generate_journal(target_day.id)
 
         # Verify summary was created
         assert summary is not None
-        assert summary.day_id == sample_day.id
+        assert summary.day_id == target_day.id
         assert summary.journal_rel_path != ""
         assert "2026-07-15.md" in summary.journal_rel_path
         assert summary.total_focus_seconds >= 0
@@ -54,17 +63,19 @@ class TestJournalContent:
     """Test the Markdown content structure of generated journals."""
 
     def test_journal_has_all_sections(
-        self, journal_engine: JournalEngine, db, sample_day: Day
+        self, journal_engine: JournalEngine, db
     ):
         """Test that the generated Markdown contains all expected sections."""
-        sample_day.date = "2026-07-15"
-        sample_day.start_time = "2026-07-15T09:00:00"
-        sample_day.end_time = "2026-07-15T17:30:00"
-        db.update_day(sample_day)
+        target_day = Day(
+            date="2026-07-15",
+            start_time="2026-07-15T09:00:00",
+            end_time="2026-07-15T17:30:00",
+        )
+        db.create_day(target_day)
 
         # Create a completed task with sessions
         task = Task(
-            day_id=sample_day.id,
+            day_id=target_day.id,
             title="Implement Journal Engine",
             priority=Priority.HIGH.value,
             status=TaskStatus.COMPLETED.value,
@@ -83,20 +94,20 @@ class TestJournalContent:
 
         # Create a reflection
         reflection = Reflection(
-            day_id=sample_day.id,
+            day_id=target_day.id,
             accomplishments="Built the full journal engine",
             challenges="Timeline sorting was tricky",
             tomorrow_first="Write integration tests",
         )
         db.save_reflection(reflection)
 
-        summary = journal_engine.generate_journal(sample_day.id)
+        summary = journal_engine.generate_journal(target_day.id)
 
         # Read the generated file back
         vault_path = journal_engine._get_vault_path()
         journal_dir = journal_engine._get_journal_dir()
         from leadership_os.utils.path_utils import get_journal_path
-        full_path = get_journal_path(vault_path, journal_dir, sample_day.date)
+        full_path = get_journal_path(vault_path, journal_dir, target_day.date)
         content = full_path.read_text(encoding="utf-8")
 
         # Verify all expected sections exist
@@ -121,24 +132,24 @@ class TestJournalContent:
         assert "Worked through the design carefully." in content
 
         # Verify summary was persisted
-        stored = db.get_summary(sample_day.id)
+        stored = db.get_summary(target_day.id)
         assert stored is not None
         assert stored.journal_rel_path == summary.journal_rel_path
 
     def test_journal_empty_day(
-        self, journal_engine: JournalEngine, db, sample_day: Day
+        self, journal_engine: JournalEngine, db
     ):
         """Test that a day with no tasks still generates a valid journal."""
-        sample_day.date = "2026-07-15"
-        db.update_day(sample_day)
+        target_day = Day(date="2026-07-15")
+        db.create_day(target_day)
 
-        summary = journal_engine.generate_journal(sample_day.id)
+        summary = journal_engine.generate_journal(target_day.id)
         assert summary is not None
 
         vault_path = journal_engine._get_vault_path()
         journal_dir = journal_engine._get_journal_dir()
         from leadership_os.utils.path_utils import get_journal_path
-        full_path = get_journal_path(vault_path, journal_dir, sample_day.date)
+        full_path = get_journal_path(vault_path, journal_dir, target_day.date)
         content = full_path.read_text(encoding="utf-8")
 
         assert "# Wednesday, July 15, 2026" in content

@@ -3,7 +3,14 @@
 Main application class that initializes all engines, sets up the theme,
 manages app state transitions, and wires together the UI layer.
 
-Complete Flet migration from KivyMD.
+Features:
+- Complete Flet desktop UI (dark theme)
+- System tray integration (pystray)
+- Keyboard shortcuts (configurable)
+- Command palette (Ctrl+K)
+- Settings / History / Today navigation
+- Single-instance lock
+- Event-driven architecture via EventBus
 """
 
 from __future__ import annotations
@@ -12,19 +19,26 @@ import asyncio
 import logging
 import sys
 from functools import partial
-from pathlib import Path
+from typing import Any
 
 import flet as ft
 
-from leadership_os.ui.theme import Theme, build_flet_theme
-from leadership_os.ui.widgets.top_bar import build_top_bar
-from leadership_os.ui.widgets.sidebar import build_sidebar
+from leadership_os.core.enums import TaskStatus
+from leadership_os.core.event_bus import CONFIG_CHANGED
+from leadership_os.core.models import Reflection
+from leadership_os.ui.theme import build_flet_theme
 from leadership_os.ui.widgets.execution_panel import build_execution_panel
+from leadership_os.ui.widgets.review_screen import build_review_screen
+from leadership_os.ui.widgets.sidebar import build_sidebar
 from leadership_os.ui.widgets.status_bar import build_status_bar
 from leadership_os.ui.widgets.task_card import build_task_card
-from leadership_os.utils.path_utils import get_app_data_dir, ensure_directory, get_log_path
+from leadership_os.ui.widgets.top_bar import build_top_bar
+from leadership_os.utils.path_utils import (
+    ensure_directory,
+    get_app_data_dir,
+    get_log_path,
+)
 from leadership_os.utils.time_utils import format_duration, format_duration_short
-from leadership_os.core.enums import TaskStatus
 
 logger = logging.getLogger(__name__)
 
@@ -76,11 +90,19 @@ class LeadershipOSApp:
         self._current_day = None
         self._active_task_id = None
         self._current_state = "startup"
-        self._update_task = None  # For periodic update scheduling
+        self._nav_view = "today"  # "today", "history", "settings"
+
+        # Tray & system
+        self._tray = None
+        self._shortcut_handler = None
+        self._instance_lock = None
 
         # UI References (updated during build)
+        self._root_column = None  # ft.Column root of page
         self._main_row = None  # ft.Row with [sidebar, center, panel]
         self._status_bar = None  # ft.Container for status bar
+        self._center_ref = ft.Ref[ft.Container]()  # Ref to center workspace container
+        self._overlay_ref = ft.Ref[ft.Container]()  # Ref to command palette overlay
 
         # Center workspace refs (set during _build_center_workspace)
         self._date_label = ft.Ref[ft.Text]()
@@ -102,10 +124,10 @@ class LeadershipOSApp:
         ensure_directory(app_dir)
         logger.info("App data directory: %s", app_dir)
 
-        from leadership_os.core.database import Database
         from leadership_os.config.config_manager import ConfigManager
-        from leadership_os.core.state_manager import StateManager
+        from leadership_os.core.database import Database
         from leadership_os.core.event_bus import EventBus
+        from leadership_os.core.state_manager import StateManager
 
         self.db = Database(app_dir / "leadership_os.db")
         self.db.initialize()
@@ -128,11 +150,11 @@ class LeadershipOSApp:
             logger.error("Cannot initialize engines: core services not ready")
             return
 
-        from leadership_os.core.task_engine import TaskEngine
-        from leadership_os.core.timer_engine import TimerEngine
         from leadership_os.core.break_engine import BreakEngine
         from leadership_os.core.journal_engine import JournalEngine
         from leadership_os.core.recovery import RecoveryManager
+        from leadership_os.core.task_engine import TaskEngine
+        from leadership_os.core.timer_engine import TimerEngine
 
         self.task_engine = TaskEngine(self.db, self.event_bus, self.state)
         self.timer_engine = TimerEngine(self.db, self.event_bus, self.state)
@@ -158,6 +180,13 @@ class LeadershipOSApp:
         self._current_state = recovery.suggested_state
         logger.info("Startup state: %s", self._current_state)
 
+    def _enter_initial_view(self) -> None:
+        """Enter the view appropriate for the recovered startup state."""
+        if self._current_state == "review":
+            self.switch_to_review()
+        else:
+            self.switch_to_today()
+
     # ─── Main Entry ─────────────────────────────────────────────────
 
     async def run(self, page: ft.Page) -> None:
@@ -173,34 +202,78 @@ class LeadershipOSApp:
         page.window.width = 1200
         page.window.height = 800
 
+        # ── Single-instance lock ──────────────────────────────────
+        app_dir = get_app_data_dir()
+        ensure_directory(app_dir)
+        from leadership_os.core.instance_lock import InstanceLock, InstanceLockError
+        self._instance_lock = InstanceLock(app_dir)
+        try:
+            self._instance_lock.acquire()
+        except InstanceLockError as e:
+            logger.warning("Another instance is already running: %s", e)
+            page.window.close()
+            return
+
         # Initialize core services and engines
         self._init_services()
         self._init_engines()
         self._run_startup()
 
+        # ── Tray manager ──────────────────────────────────────────
+        from leadership_os.tray.tray_manager import TrayManager
+        self._tray = TrayManager(
+            self.event_bus,
+            on_show_window=self._on_tray_show_window,
+            on_quit=self._on_tray_quit,
+        )
+        # Subscribe to tray command events
+        self.event_bus.subscribe("cmd_pause_task", self._on_tray_pause)
+        self.event_bus.subscribe("cmd_complete_task", self._on_tray_complete)
+        self.event_bus.subscribe("cmd_start_break", self._on_tray_start_break)
+        self.event_bus.subscribe("cmd_resume_task", self._on_tray_resume)
+        self.event_bus.subscribe("cmd_end_break", self._on_tray_end_break)
+        self.event_bus.subscribe(CONFIG_CHANGED, self._on_config_changed)
+        self._tray.start()
+
+        # ── Keyboard shortcuts ────────────────────────────────────
+        from leadership_os.ui.shortcut_handler import ShortcutHandler
+        action_map = {
+            "create_task": self._on_shortcut_create_task,
+            "complete_task": self._on_shortcut_complete_task,
+            "pause_task": self._on_shortcut_pause_task,
+            "start_break": self._on_shortcut_start_break,
+            "end_break": self._on_shortcut_end_break,
+            "end_day": self._on_shortcut_end_day,
+            "command_palette": self._on_shortcut_command_palette,
+            "settings": self._on_shortcut_settings,
+            "escape": self._on_shortcut_escape,
+        }
+        self._shortcut_handler = ShortcutHandler(self.config, action_map)
+        page.on_keyboard_event = self._shortcut_handler.handle
+
+        # ── Prevent close → minimize to tray ──────────────────────
+        minimize_to_tray = self.config.get("startup", "minimize_to_tray", True)
+        if minimize_to_tray:
+            page.window.prevent_close = True
+
         # Build the UI
         self._build_ui()
-
-        # Wire up the page
-        page.update()
 
         # Populate initial data
         self._current_day = self.db.get_or_create_today()
         self._refresh_ui()
 
-        # Start periodic update (1 second interval)
-        try:
-            while True:
-                await asyncio.sleep(1.0)
-                self._ui_tick()
-                page.update()
-        finally:
-            self.on_stop()
+        # Enter the view appropriate for the recovered startup state
+        self._enter_initial_view()
+
+        # Start periodic update via Flet's async task runner
+        page.run_task(self._ui_tick_loop)
+        page.update()
 
     # ─── UI Building ─────────────────────────────────────────────────
 
     def _build_ui(self) -> None:
-        """Build complete UI layout."""
+        """Build complete UI layout with Stack for overlay support."""
         self.page.controls.clear()
 
         # Top bar
@@ -256,14 +329,26 @@ class LeadershipOSApp:
             completed_display="0",
         )
 
-        # Store references for efficient updates
+        # Command palette overlay (hidden by default)
+        command_overlay = ft.Container(
+            ref=self._overlay_ref,
+            visible=False,
+        )
+
+        # Store references
         self._main_row = main_content
         self._status_bar = status_bar
 
+        app_column = ft.Column(
+            spacing=0,
+            controls=[top_bar, main_content, status_bar],
+            expand=True,
+        )
+
+        self._root_column = app_column
         self.page.add(
-            ft.Column(
-                spacing=0,
-                controls=[top_bar, main_content, status_bar],
+            ft.Stack(
+                controls=[app_column, command_overlay],
                 expand=True,
             )
         )
@@ -439,45 +524,68 @@ class LeadershipOSApp:
             ),
         )
 
-    # ─── UI Updates (called every second) ────────────────────────────
+    # ─── UI Tick Loop (async, uses page.run_task) ──────────────────
+
+    async def _ui_tick_loop(self) -> None:
+        """Async loop that periodically refreshes the UI (runs via page.run_task).
+
+        Replaces the old `while True: await asyncio.sleep(1.0)` pattern with
+        Flet's proper async task mechanism. Runs every second.
+        """
+        try:
+            while True:
+                await asyncio.sleep(1.0)
+                if not self.page or not self._current_day:
+                    continue
+                try:
+                    self._ui_tick()
+                    self.page.update()
+                except Exception as e:
+                    logger.debug("UI tick error: %s", e)
+        except asyncio.CancelledError:
+            logger.debug("UI tick loop cancelled")
+        finally:
+            self.on_stop()
 
     def _ui_tick(self) -> None:
         """Periodic UI update — refreshes timer, progress, and status."""
         if not self.page or not self._current_day:
             return
 
-        try:
-            day_id = self._current_day.id
-            active_task_id = self.state.get_active_task_id() if self.state else None
+        day_id = self._current_day.id
+        active_task_id = self.state.get_active_task_id() if self.state else None
 
-            # Build updated sidebar state
-            focus_time = 0
-            if self.timer_engine:
-                focus_time = self.timer_engine.get_day_focus_seconds(day_id)
+        focus_time = 0
+        if self.timer_engine:
+            focus_time = self.timer_engine.get_day_focus_seconds(day_id)
 
-            tasks = self.task_engine.get_tasks(day_id) if self.task_engine else []
-            completed = sum(1 for t in tasks if t.status == TaskStatus.COMPLETED.value)
-            total = len(tasks)
+        tasks = self.task_engine.get_tasks(day_id) if self.task_engine else []
+        completed = sum(1 for t in tasks if t.status == TaskStatus.COMPLETED.value)
+        total = len(tasks)
 
-            # Determine status text
-            if self._current_state in ("planning", "idle", "startup"):
-                status_text = "Ready"
-            elif self._current_state == "working":
-                status_text = "Focusing"
-            elif self._current_state == "break":
-                status_text = "On Break"
-            elif self._current_state == "review":
-                status_text = "Reviewing"
-            else:
-                status_text = "Ready"
+        # Determine status text
+        status_text = self._get_status_text()
 
-            # Rebuild sidebar (cleanest way in Flet for complex state)
-            # In a production app, use individual controls refs for perf
-            # For now, rebuild the entire three-column layout
+        # Update tray progress
+        if self._tray:
+            focus_label = format_duration_short(focus_time)
+            self._tray.update_progress(focus_label, completed, total)
+
+        # Only rebuild main view when on today view
+        if self._nav_view == "today":
             self._rebuild_main_view(day_id, active_task_id, focus_time, tasks, completed, total, status_text)
 
-        except Exception as e:
-            logger.debug("UI tick error: %s", e)
+    def _get_status_text(self) -> str:
+        """Get human-readable status based on current app state."""
+        if self._current_state in ("planning", "idle", "startup"):
+            return "Ready"
+        elif self._current_state == "working":
+            return "Focusing"
+        elif self._current_state == "break":
+            return "On Break"
+        elif self._current_state == "review":
+            return "Reviewing"
+        return "Ready"
 
     def _rebuild_main_view(
         self, day_id: str, active_task_id: str | None,
@@ -802,25 +910,313 @@ class LeadershipOSApp:
 
     def switch_to_today(self) -> None:
         """Navigate to the Today/Planning view."""
+        self._nav_view = "today"
         self._current_state = "planning"
+        self._show_today_workspace()
         self._refresh_ui()
         logger.info("Navigated to Today")
 
     def switch_to_history(self) -> None:
         """Navigate to the History view."""
+        self._nav_view = "history"
+        self._show_history_workspace()
         logger.info("Navigated to History")
 
     def switch_to_settings(self) -> None:
         """Navigate to the Settings view."""
+        self._nav_view = "settings"
+        self._show_settings_workspace()
         logger.info("Navigated to Settings")
 
+    def switch_to_review(self) -> None:
+        """Navigate to the End-of-Day Review view."""
+        self._nav_view = "review"
+        self._current_state = "review"
+        self._show_review_workspace()
+        logger.info("Navigated to End-of-Day Review")
+
+    def _show_today_workspace(self) -> None:
+        """Replace center workspace with the Today task list."""
+        if self._main_row:
+            center = self._build_center_workspace()
+            self._main_row.controls[1] = center
+            # Don't call page.update() here — _refresh_ui() handles it
+
+    def _show_history_workspace(self) -> None:
+        """Replace center workspace with the History screen."""
+        if not self._main_row or not self.db:
+            return
+        from leadership_os.ui.widgets.history_screen import build_history_screen, init_history_list
+        history = build_history_screen(self.db, on_close=self.switch_to_today)
+        self._main_row.controls[1] = history
+        if self.page:
+            self.page.update()
+            # Trigger day list load after render
+            init_history_list(self.db, history)
+
+    def _show_settings_workspace(self) -> None:
+        """Replace center workspace with the Settings screen."""
+        if not self._main_row or not self.config:
+            return
+        from leadership_os.ui.widgets.settings_screen import build_settings_screen
+        settings = build_settings_screen(
+            self.config, self.event_bus, on_close=self.switch_to_today
+        )
+        self._main_row.controls[1] = settings
+        if self.page:
+            self.page.update()
+
+    def _show_review_workspace(self) -> None:
+        """Replace center workspace with the End-of-Day Review screen."""
+        if not self._main_row or not self.db or not self._current_day:
+            return
+        day_id = self._current_day.id
+        tasks = self.task_engine.get_tasks(day_id) if self.task_engine else []
+        completed = sum(1 for t in tasks if t.status == TaskStatus.COMPLETED.value)
+        total = len(tasks)
+        focus_seconds = self.timer_engine.get_day_focus_seconds(day_id) if self.timer_engine else 0
+        break_seconds = self.db.calculate_day_break_seconds(day_id) if self.db else 0
+        session_count = self.db.get_session_count(day_id) if self.db else 0
+
+        # Pending tasks for tomorrow preview
+        tomorrow_tasks = [t.title for t in tasks if t.status in (
+            TaskStatus.PENDING.value, TaskStatus.ACTIVE.value, TaskStatus.PAUSED.value
+        )]
+
+        # Pre-fill any existing reflection
+        existing = self.db.get_reflection(day_id)
+        initial = {
+            "accomplishments": existing.accomplishments if existing else "",
+            "challenges": existing.challenges if existing else "",
+            "tomorrow_first": existing.tomorrow_first if existing else "",
+            "additional_notes": existing.additional_notes if existing else "",
+        } if existing else {}
+
+        review = build_review_screen(
+            focus_seconds=focus_seconds,
+            completed_count=completed,
+            total_count=total,
+            session_count=session_count,
+            break_seconds=break_seconds,
+            tomorrow_tasks=tomorrow_tasks,
+            initial_accomplishments=initial.get("accomplishments", ""),
+            initial_challenges=initial.get("challenges", ""),
+            initial_tomorrow_first=initial.get("tomorrow_first", ""),
+            initial_notes=initial.get("additional_notes", ""),
+            on_finalize=self._handle_review_finalize,
+            on_skip=self._handle_review_skip,
+            on_cancel=self.switch_to_today,
+        )
+        self._main_row.controls[1] = review
+        if self.page:
+            self.page.update()
+
     def show_search(self) -> None:
-        """Open the search dialog."""
-        logger.info("Search requested")
+        """Open search (shows command palette focused on task search)."""
+        self.show_command_palette()
 
     def show_command_palette(self) -> None:
-        """Open the command palette."""
-        logger.info("Command palette requested")
+        """Show the command palette overlay."""
+        if not self.page or not self._overlay_ref.current:
+            return
+        from leadership_os.ui.widgets.command_palette import build_command_palette
+        palette = build_command_palette(
+            self.task_engine,
+            on_search_task=self._on_palette_task_selected,
+            on_run_command=self._on_palette_command,
+            on_close=self._hide_command_palette,
+        )
+        # Replace overlay content
+        parent = self._overlay_ref.current
+        parent.content = palette
+        parent.visible = True
+        self.page.update()
+
+    def _hide_command_palette(self) -> None:
+        """Hide the command palette overlay."""
+        if self._overlay_ref.current:
+            self._overlay_ref.current.visible = False
+            if self.page:
+                self.page.update()
+
+    # ─── Tray & Window Event Handlers ───────────────────────────────
+
+    def _on_tray_show_window(self) -> None:
+        """Show the main window (called from tray)."""
+        if self.page and self.page.window:
+            self.page.window.show()
+            # Refresh UI to show current state
+            self.switch_to_today()
+
+    def _on_tray_quit(self) -> None:
+        """Quit the app (called from tray)."""
+        if self.page and self.page.window:
+            # Allow close: disable prevent_close so window actually closes
+            self.page.window.prevent_close = False
+            self.page.window.close()
+
+    def _on_tray_pause(self, event: str, data: dict[str, Any]) -> None:
+        self._pause_active_task()
+
+    def _on_tray_complete(self, event: str, data: dict[str, Any]) -> None:
+        self._complete_active_task()
+
+    def _on_tray_start_break(self, event: str, data: dict[str, Any]) -> None:
+        self._start_break()
+
+    def _on_tray_resume(self, event: str, data: dict[str, Any]) -> None:
+        self._resume_from_break()
+
+    def _on_tray_end_break(self, event: str, data: dict[str, Any]) -> None:
+        self._end_break()
+
+    def _on_config_changed(self, event: str, data: dict[str, Any]) -> None:
+        """Reload shortcuts when config changes."""
+        if self._shortcut_handler:
+            self._shortcut_handler.reload_shortcuts()
+        logger.info("Configuration change detected, shortcuts reloaded")
+
+    # ─── Palette Callbacks ──────────────────────────────────────────
+
+    def _on_palette_task_selected(self, task_id: str) -> None:
+        """A task was selected in the command palette."""
+        self.switch_to_today()
+        self._activate_task(task_id)
+
+    def _on_palette_command(self, command: str) -> None:
+        """A command was selected in the command palette."""
+        cmd_map: dict[str, Any] = {
+            "pause_task": self._pause_active_task,
+            "complete_task": self._complete_active_task,
+            "start_break": self._start_break,
+            "end_break": self._end_break,
+            "end_day": self._on_shortcut_end_day,
+            "goto_today": self.switch_to_today,
+            "goto_history": self.switch_to_history,
+            "goto_settings": self.switch_to_settings,
+            "search": self.show_command_palette,
+        }
+        action = cmd_map.get(command)
+        if action:
+            action()
+
+    # ─── Shortcut Callbacks ─────────────────────────────────────────
+
+    def _on_shortcut_create_task(self) -> None:
+        if self._task_input.current:
+            self._task_input.current.focus()
+
+    def _on_shortcut_complete_task(self) -> None:
+        self._complete_active_task()
+
+    def _on_shortcut_pause_task(self) -> None:
+        self._pause_active_task()
+
+    def _on_shortcut_start_break(self) -> None:
+        self._start_break()
+
+    def _on_shortcut_end_break(self) -> None:
+        self._end_break()
+
+    def _on_shortcut_end_day(self) -> None:
+        """Open the End-of-Day Review screen."""
+        self.switch_to_review()
+
+    def _handle_review_finalize(self, data: dict[str, str]) -> None:
+        """Save reflection, generate journal, and end the day."""
+        if not self._current_day or not self.db or not self.journal_engine:
+            return
+
+        day_id = self._current_day.id
+        reflection = Reflection(
+            day_id=day_id,
+            accomplishments=data.get("accomplishments", ""),
+            challenges=data.get("challenges", ""),
+            tomorrow_first=data.get("tomorrow_first", ""),
+            additional_notes=data.get("additional_notes", ""),
+        )
+
+        # Persist reflection
+        try:
+            self.db.save_reflection(reflection)
+        except Exception as e:
+            logger.error("Failed to save reflection: %s", e, exc_info=True)
+            if self.page:
+                self.page.show_snack_bar(
+                    ft.SnackBar(
+                        content=ft.Text("Failed to save reflection.", color="white", size=13),
+                        bgcolor="#C45B5B",
+                        duration=3000,
+                    )
+                )
+            return
+
+        # Generate journal
+        try:
+            summary = self.journal_engine.generate_journal(day_id)
+        except Exception as e:
+            logger.error("Failed to generate journal: %s", e, exc_info=True)
+            if self.page:
+                self.page.show_snack_bar(
+                    ft.SnackBar(
+                        content=ft.Text("Failed to generate journal.", color="white", size=13),
+                        bgcolor="#C45B5B",
+                        duration=3000,
+                    )
+                )
+            return
+
+        # Mark day complete
+        try:
+            self.db.end_day(self._current_day)
+        except Exception as e:
+            logger.error("Failed to end day: %s", e, exc_info=True)
+            if self.page:
+                self.page.show_snack_bar(
+                    ft.SnackBar(
+                        content=ft.Text("Failed to close the day.", color="white", size=13),
+                        bgcolor="#C45B5B",
+                        duration=3000,
+                    )
+                )
+            return
+
+        if self.state:
+            self.state.set_needs_review(False)
+
+        # Show a brief snackbar with the absolute journal path
+        if self.page:
+            journal_path = str(get_app_data_dir() / summary.journal_rel_path)
+            self.page.show_snack_bar(
+                ft.SnackBar(
+                    content=ft.Text(f"Journal saved: {journal_path}", color="white", size=13),
+                    bgcolor="#66A66B",
+                    duration=3000,
+                )
+            )
+
+        # Create a fresh day and return to today view
+        self._current_day = self.db.get_or_create_today()
+        self.switch_to_today()
+        logger.info("End-of-day review finalized for %s", day_id)
+
+    def _handle_review_skip(self) -> None:
+        """Skip reflection but still end the day and generate a journal."""
+        self._handle_review_finalize({
+            "accomplishments": "",
+            "challenges": "",
+            "tomorrow_first": "",
+            "additional_notes": "",
+        })
+
+    def _on_shortcut_command_palette(self) -> None:
+        self.show_command_palette()
+
+    def _on_shortcut_settings(self) -> None:
+        self.switch_to_settings()
+
+    def _on_shortcut_escape(self) -> None:
+        self._hide_command_palette()
 
     # ─── Lifecycle ────────────────────────────────────────────────────
 
@@ -828,23 +1224,52 @@ class LeadershipOSApp:
         """Save state on shutdown."""
         logger.info("Leadership OS shutting down")
 
-        if self.state:
-            self.state.set_needs_review(True)
-            self.state.set_app_state(self._current_state)
-            self.state.save()
+        # Stop tray
+        if self._tray:
+            try:
+                self._tray.stop()
+            except Exception as e:
+                logger.warning("Error stopping tray: %s", e)
 
+        # Save state
+        if self.state:
+            try:
+                self.state.set_needs_review(True)
+                self.state.set_app_state(self._current_state)
+                self.state.save()
+            except Exception as e:
+                logger.warning("Error saving state: %s", e)
+
+        # Close database
         if self.db:
-            self.db.close()
+            try:
+                self.db.close()
+            except Exception as e:
+                logger.warning("Error closing database: %s", e)
+
+        # Release instance lock
+        if self._instance_lock:
+            try:
+                self._instance_lock.release()
+            except Exception as e:
+                logger.warning("Error releasing instance lock: %s", e)
 
         logger.info("Leadership OS shutdown complete")
 
 
 
 def main() -> None:
-    """Main entry point for Leadership OS (Flet)."""
+    """Main entry point for Leadership OS (Flet).
+
+    Handles graceful startup including:
+    - Logging setup
+    - Single-instance enforcement
+    - Engine initialization
+    - Flet app launch
+    """
     setup_logging()
     _logger = logging.getLogger(__name__)
-    _logger.info("Leadership OS starting...")
+    _logger.info("Leadership OS v%s starting...", __import__('leadership_os').__version__)
 
     try:
         app_instance = LeadershipOSApp()

@@ -211,6 +211,16 @@ class Database:
             logger.info("Created day record for %s", today)
             return day
 
+    def create_day(self, day: Day) -> Day:
+        """Insert a new day record."""
+        with self._cursor() as cursor:
+            cursor.execute(
+                """INSERT INTO days (id, date, start_time, end_time, status, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (day.id, day.date, day.start_time, day.end_time, day.status, day.created_at, day.updated_at),
+            )
+        return day
+
     def get_day(self, day_id: str) -> Day | None:
         """Get a day record by its ID."""
         with self._cursor() as cursor:

@@ -251,13 +251,12 @@ def build_execution_panel(
                             ft.Container(height=2),
 
                             # Complete — PRIMARY
-                            ft.ElevatedButton(
-                                content="✓  Complete Task",
+                            ft.Button(
+                                content=ft.Text("✓  Complete Task", color="white"),
                                 disabled=not has_task,
                                 on_click=lambda _: on_complete(),
                                 height=40,
                                 bgcolor="#4A6FA5" if has_task else "#4A6FA540",
-                                color="white",
                                 style=ft.ButtonStyle(
                                     shape=ft.RoundedRectangleBorder(radius=8),
                                 ),
@@ -293,13 +292,12 @@ def build_execution_panel(
                             ft.Divider(height=1, color="#2D2D4A0D"),
 
                             # Resume — BREAK PRIMARY
-                            ft.ElevatedButton(
-                                content="▶  Resume Work",
+                            ft.Button(
+                                content=ft.Text("▶  Resume Work", color="white"),
                                 disabled=not on_break,
                                 on_click=lambda _: on_resume(),
                                 height=40,
                                 bgcolor="#66A66B" if on_break else "#66A66B35",
-                                color="white",
                                 style=ft.ButtonStyle(
                                     shape=ft.RoundedRectangleBorder(radius=8),
                                 ),
