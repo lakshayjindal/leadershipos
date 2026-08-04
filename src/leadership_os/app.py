@@ -869,7 +869,8 @@ class LeadershipOSApp:
             )
             title_input.value = ""
             logger.info("Task created: %s (id=%s)", task.title, task.id)
-            self._activate_task(task.id)
+            # Task is created as pending — user must click Start to activate it
+            self._refresh_ui()
         except Exception as e:
             logger.error("Failed to create task: %s", e, exc_info=True)
 

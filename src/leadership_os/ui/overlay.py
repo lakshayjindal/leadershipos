@@ -171,7 +171,13 @@ class OverlayWindow:
         if not _HAS_TKINTER:
             return
 
-        self._root = tk.Tk()
+        try:
+            self._root = tk.Tk()
+        except Exception as e:
+            logger.warning("Cannot create overlay window (no display?): %s", e)
+            self._running = False
+            return
+
         self._root.title("Leadership OS")
         self._root.overrideredirect(True)
         self._root.attributes("-topmost", True)
