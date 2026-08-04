@@ -252,8 +252,18 @@ class LeadershipOSApp:
             "settings": self._on_shortcut_settings,
             "escape": self._on_shortcut_escape,
         }
-        self._shortcut_handler = ShortcutHandler(self.config, action_map)
-        page.on_keyboard_event = self._shortcut_handler.handle
+        # ── Keyboard ─── page.on_keyboard_event handles both shortcuts
+        # and task list navigation (arrow keys). We wrap to check nav first.
+        shortcut_handle = self._shortcut_handler.handle
+
+        def _combined_keyboard_handler(e: ft.KeyboardEvent) -> bool:
+            # Check for task list navigation keys first
+            if self._on_task_list_keyboard(e):
+                return True
+            # Then delegate to shortcut handler
+            return shortcut_handle(e)
+
+        page.on_keyboard_event = _combined_keyboard_handler
 
         # ── Prevent close → minimize to tray ──────────────────────
         minimize_to_tray = self.config.get("startup", "minimize_to_tray", True)
@@ -346,15 +356,9 @@ class LeadershipOSApp:
         self._main_row = main_content
         self._status_bar = status_bar
 
-        # Wrap main row for keyboard navigation
-        main_row_wrapper = ft.GestureDetector(
-            content=main_content,
-            on_keyboard_event=self._on_task_list_keyboard,
-        )
-
         app_column = ft.Column(
             spacing=0,
-            controls=[top_bar, main_row_wrapper, status_bar],
+            controls=[top_bar, main_content, status_bar],
             expand=True,
         )
 
@@ -1390,58 +1394,60 @@ class LeadershipOSApp:
 
     # ─── Keyboard Task Navigation (Phase 5) ──────────────────────────
 
-    def _on_task_list_keyboard(self, e: ft.KeyboardEvent) -> None:
+    def _on_task_list_keyboard(self, e: ft.KeyboardEvent) -> bool:
         """Handle arrow key navigation in the task list.
 
-        Ctrl+Up/Down: reorder tasks
-        Up/Down: navigate task selection
-        Enter: activate selected task
+        Returns True if the event was handled.
         """
         if self._nav_view != "today":
-            return
+            return False
 
         if not self._current_day:
-            return
+            return False
 
         tasks = self.task_engine.get_tasks(self._current_day.id) if self.task_engine else []
         pending = [t for t in tasks if t.status not in (TaskStatus.COMPLETED.value, TaskStatus.ARCHIVED.value, TaskStatus.DELETED.value)]
 
         if not pending:
-            return
+            return False
 
         # Ctrl+Up / Ctrl+Down: reorder
         if e.ctrl and e.key in ("Arrow Up", "Arrow Down"):
-            if self._selected_task_index < 0 or self._selected_task_index >= len(pending):
-                return
-            if e.key == "Arrow Up" and self._selected_task_index > 0:
-                # Swap with previous
-                pending[self._selected_task_index], pending[self._selected_task_index - 1] = \
-                    pending[self._selected_task_index - 1], pending[self._selected_task_index]
-                self._selected_task_index -= 1
-            elif e.key == "Arrow Down" and self._selected_task_index < len(pending) - 1:
-                # Swap with next
-                pending[self._selected_task_index], pending[self._selected_task_index + 1] = \
-                    pending[self._selected_task_index + 1], pending[self._selected_task_index]
-                self._selected_task_index += 1
+            if 0 <= self._selected_task_index < len(pending):
+                if e.key == "Arrow Up" and self._selected_task_index > 0:
+                    pending[self._selected_task_index], pending[self._selected_task_index - 1] = \
+                        pending[self._selected_task_index - 1], pending[self._selected_task_index]
+                    self._selected_task_index -= 1
+                elif e.key == "Arrow Down" and self._selected_task_index < len(pending) - 1:
+                    pending[self._selected_task_index], pending[self._selected_task_index + 1] = \
+                        pending[self._selected_task_index + 1], pending[self._selected_task_index]
+                    self._selected_task_index += 1
+                else:
+                    return False
 
-            # Persist new order
-            self.task_engine.reorder_tasks(
-                self._current_day.id,
-                [t.id for t in pending],
-            )
-            self._refresh_ui()
-            return
+                self.task_engine.reorder_tasks(
+                    self._current_day.id,
+                    [t.id for t in pending],
+                )
+                self._refresh_ui()
+                return True
+            return False
 
         # Up/Down: navigate selection
         if e.key == "Arrow Down":
             self._selected_task_index = min(self._selected_task_index + 1, len(pending) - 1)
             self._refresh_ui()
-        elif e.key == "Arrow Up":
+            return True
+        if e.key == "Arrow Up":
             self._selected_task_index = max(self._selected_task_index - 1, 0)
             self._refresh_ui()
-        elif e.key == "Enter" and self._selected_task_index >= 0:
+            return True
+        if e.key == "Enter" and self._selected_task_index >= 0:
             selected = pending[self._selected_task_index]
             self._activate_task(selected.id)
+            return True
+
+        return False
 
     # ─── Lifecycle ────────────────────────────────────────────────────
 
