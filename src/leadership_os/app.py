@@ -1179,7 +1179,7 @@ class LeadershipOSApp:
         except Exception as e:
             logger.error("Failed to save reflection: %s", e, exc_info=True)
             if self.page:
-                self.page.show_snack_bar(
+                self.page.open(
                     ft.SnackBar(
                         content=ft.Text("Failed to save reflection.", color="white", size=13),
                         bgcolor="#C45B5B",
@@ -1194,7 +1194,7 @@ class LeadershipOSApp:
         except Exception as e:
             logger.error("Failed to generate journal: %s", e, exc_info=True)
             if self.page:
-                self.page.show_snack_bar(
+                self.page.open(
                     ft.SnackBar(
                         content=ft.Text("Failed to generate journal.", color="white", size=13),
                         bgcolor="#C45B5B",
@@ -1209,7 +1209,7 @@ class LeadershipOSApp:
         except Exception as e:
             logger.error("Failed to end day: %s", e, exc_info=True)
             if self.page:
-                self.page.show_snack_bar(
+                self.page.open(
                     ft.SnackBar(
                         content=ft.Text("Failed to close the day.", color="white", size=13),
                         bgcolor="#C45B5B",
@@ -1224,7 +1224,7 @@ class LeadershipOSApp:
         # Show a brief snackbar with the absolute journal path
         if self.page:
             journal_path = str(get_app_data_dir() / summary.journal_rel_path)
-            self.page.show_snack_bar(
+            self.page.open(
                 ft.SnackBar(
                     content=ft.Text(f"Journal saved: {journal_path}", color="white", size=13),
                     bgcolor="#66A66B",

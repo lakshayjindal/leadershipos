@@ -157,9 +157,9 @@ def build_settings_screen(
 
         # Show brief snackbar
         if e.page:
-            e.page.show_snack_bar(
+            e.page.open(
                 ft.SnackBar(
-                    ft.Text("Settings saved", color="white", size=13),
+                    content=ft.Text("Settings saved", color="white", size=13),
                     bgcolor="#66A66B",
                     duration=2000,
                 )
