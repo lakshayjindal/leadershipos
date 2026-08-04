@@ -254,6 +254,7 @@ class LeadershipOSApp:
         }
         # ── Keyboard ─── page.on_keyboard_event handles both shortcuts
         # and task list navigation (arrow keys). We wrap to check nav first.
+        self._shortcut_handler = ShortcutHandler(self.config, action_map)
         shortcut_handle = self._shortcut_handler.handle
 
         def _combined_keyboard_handler(e: ft.KeyboardEvent) -> bool:
