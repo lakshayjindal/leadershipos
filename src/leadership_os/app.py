@@ -1179,13 +1179,13 @@ class LeadershipOSApp:
         except Exception as e:
             logger.error("Failed to save reflection: %s", e, exc_info=True)
             if self.page:
-                self.page.open(
-                    ft.SnackBar(
-                        content=ft.Text("Failed to save reflection.", color="white", size=13),
-                        bgcolor="#C45B5B",
-                        duration=3000,
-                    )
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text("Failed to save reflection.", color="white", size=13),
+                    bgcolor="#C45B5B",
+                    duration=3000,
                 )
+                self.page.snack_bar.open = True
+                self.page.update()
             return
 
         # Generate journal
@@ -1194,13 +1194,13 @@ class LeadershipOSApp:
         except Exception as e:
             logger.error("Failed to generate journal: %s", e, exc_info=True)
             if self.page:
-                self.page.open(
-                    ft.SnackBar(
-                        content=ft.Text("Failed to generate journal.", color="white", size=13),
-                        bgcolor="#C45B5B",
-                        duration=3000,
-                    )
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text("Failed to generate journal.", color="white", size=13),
+                    bgcolor="#C45B5B",
+                    duration=3000,
                 )
+                self.page.snack_bar.open = True
+                self.page.update()
             return
 
         # Mark day complete
@@ -1209,13 +1209,13 @@ class LeadershipOSApp:
         except Exception as e:
             logger.error("Failed to end day: %s", e, exc_info=True)
             if self.page:
-                self.page.open(
-                    ft.SnackBar(
-                        content=ft.Text("Failed to close the day.", color="white", size=13),
-                        bgcolor="#C45B5B",
-                        duration=3000,
-                    )
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text("Failed to close the day.", color="white", size=13),
+                    bgcolor="#C45B5B",
+                    duration=3000,
                 )
+                self.page.snack_bar.open = True
+                self.page.update()
             return
 
         if self.state:
@@ -1224,13 +1224,13 @@ class LeadershipOSApp:
         # Show a brief snackbar with the absolute journal path
         if self.page:
             journal_path = str(get_app_data_dir() / summary.journal_rel_path)
-            self.page.open(
-                ft.SnackBar(
-                    content=ft.Text(f"Journal saved: {journal_path}", color="white", size=13),
-                    bgcolor="#66A66B",
-                    duration=3000,
-                )
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Journal saved: {journal_path}", color="white", size=13),
+                bgcolor="#66A66B",
+                duration=3000,
             )
+            self.page.snack_bar.open = True
+            self.page.update()
 
         # Create a fresh day and return to today view
         self._current_day = self.db.get_or_create_today()

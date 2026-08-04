@@ -157,13 +157,13 @@ def build_settings_screen(
 
         # Show brief snackbar
         if e.page:
-            e.page.open(
-                ft.SnackBar(
-                    content=ft.Text("Settings saved", color="white", size=13),
-                    bgcolor="#66A66B",
-                    duration=2000,
-                )
+            e.page.snack_bar = ft.SnackBar(
+                content=ft.Text("Settings saved", color="white", size=13),
+                bgcolor="#66A66B",
+                duration=2000,
             )
+            e.page.snack_bar.open = True
+            e.page.update()
 
     def on_reset(e):
         """Reset all settings to defaults."""
