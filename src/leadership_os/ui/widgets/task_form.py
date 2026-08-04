@@ -89,7 +89,7 @@ def build_task_form(
                     ),
                     ft.TextField(
                         value=deadline,
-                        hint_text="Deadline (optional)",
+                        hint_text="Deadline — e.g. 17:00 or Before Lunch",
                         on_change=lambda e: on_deadline_change(e.control.value),
                         height=48,
                         border=ft.InputBorder.OUTLINE,
@@ -98,6 +98,29 @@ def build_task_form(
                         bgcolor="#1A1A2E",
                         text_style=ft.TextStyle(color="#E8E8F0", size=13),
                         hint_style=ft.TextStyle(color="#747496", size=13),
+                    ),
+                    ft.Row(
+                        spacing=4,
+                        controls=[
+                            ft.Chip(
+                                label=ft.Text("Before Lunch", size=10),
+                                on_select=lambda _: on_deadline_change("Before Lunch"),
+                                bgcolor="#2D2D4A25",
+                                selected_color="#4A6FA5",
+                            ),
+                            ft.Chip(
+                                label=ft.Text("Before Dinner", size=10),
+                                on_select=lambda _: on_deadline_change("Before Dinner"),
+                                bgcolor="#2D2D4A25",
+                                selected_color="#4A6FA5",
+                            ),
+                            ft.Chip(
+                                label=ft.Text("End of Day", size=10),
+                                on_select=lambda _: on_deadline_change("End of Day"),
+                                bgcolor="#2D2D4A25",
+                                selected_color="#4A6FA5",
+                            ),
+                        ],
                     ),
                     ft.TextField(
                         value=notes,

@@ -18,13 +18,14 @@ def build_task_card(
     status: str,
     is_active: bool,
     is_completed: bool,
-    deadline: str,
-    estimated_minutes: int,
-    actual_seconds: int,
-    on_activate,
-    on_complete,
-    on_edit,
-    on_delete,
+    is_selected: bool = False,
+    deadline: str = "",
+    estimated_minutes: int = 0,
+    actual_seconds: int = 0,
+    on_activate=None,
+    on_complete=None,
+    on_edit=None,
+    on_delete=None,
 ) -> ft.Container:
     """Build a single task card.
 
@@ -35,6 +36,7 @@ def build_task_card(
         status: Task status string.
         is_active: Whether this is the currently active task.
         is_completed: Whether this task is completed.
+        is_selected: Whether this task is selected via keyboard navigation.
         deadline: Deadline string or empty.
         estimated_minutes: Estimated duration in minutes.
         actual_seconds: Actual time spent in seconds.
@@ -78,9 +80,12 @@ def build_task_card(
 
     return ft.Container(
         height=48,
-        bgcolor="#15152B",
+        bgcolor="#1A1A30" if is_selected else "#15152B",
         border_radius=8,
-        border=ft.Border.all(1, "#2D2D4A2E"),
+        border=ft.Border.all(
+            1.5 if is_selected else 1,
+            "#4A6FA5" if is_selected else "#2D2D4A2E",
+        ),
         padding=0,
         content=ft.Row(
             spacing=0,

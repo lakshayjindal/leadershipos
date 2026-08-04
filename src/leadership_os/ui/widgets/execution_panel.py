@@ -72,12 +72,15 @@ def build_execution_panel(
     focus_time_display: str,
     # Next up
     next_task_title: str,
+    # Break info (Phase 6)
+    break_type_label: str = "",
+    break_elapsed: str = "",
     # Callbacks
-    on_pause,
-    on_complete,
-    on_start_break,
-    on_resume,
-    on_end_break,
+    on_pause=None,
+    on_complete=None,
+    on_start_break=None,
+    on_resume=None,
+    on_end_break=None,
 ) -> ft.Container:
     """Build the right execution panel."""
     panel_width = 280
@@ -142,9 +145,9 @@ def build_execution_panel(
                     ),
                 ),
 
-                # ── CARD: Timer (focal point) ────────────────────
+                # ── CARD: Timer (focal point) ────────────
                 _card(
-                    height=120,
+                    height=140 if on_break else 120,
                     padding=14,
                     content=ft.Column(
                         spacing=0,
@@ -169,10 +172,12 @@ def build_execution_panel(
                                 size=10,
                                 weight=ft.FontWeight.W_700,
                             ),
-                            # Elapsed / remaining
+                            # Sub-label
                             ft.Text(
-                                f"Elapsed {session_elapsed}  ·  Remain {session_estimated}",
-                                color="#5A5A80",
+                                f"{break_type_label}  ·  {break_elapsed}" if on_break and break_type_label else (
+                                    f"Elapsed {session_elapsed}  ·  Remain {session_estimated}"
+                                ),
+                                color="#C45B5B" if on_break else "#5A5A80",
                                 size=9,
                             ),
                         ],

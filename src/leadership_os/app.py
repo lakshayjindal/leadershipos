@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
+from datetime import datetime
 from functools import partial
 from typing import Any
 
@@ -90,7 +91,10 @@ class LeadershipOSApp:
         self._current_day = None
         self._active_task_id = None
         self._current_state = "startup"
-        self._nav_view = "today"  # "today", "history", "settings"
+        self._nav_view = "today"  # "today", "history", "settings", "carry_forward", "break_dialog"
+        self._selected_task_index: int = -1  # For keyboard task navigation
+        self._carry_forward_tasks: list = []  # Tasks to review on startup
+        self._task_day_map: dict[str, str] = {}  # task_id -> day date for carry-forward
 
         # Tray & system
         self._tray = None
@@ -266,6 +270,9 @@ class LeadershipOSApp:
         # Enter the view appropriate for the recovered startup state
         self._enter_initial_view()
 
+        # Check for carry-forward tasks from previous days
+        self._check_carry_forward()
+
         # Start periodic update via Flet's async task runner
         page.run_task(self._ui_tick_loop)
         page.update()
@@ -339,9 +346,15 @@ class LeadershipOSApp:
         self._main_row = main_content
         self._status_bar = status_bar
 
+        # Wrap main row for keyboard navigation
+        main_row_wrapper = ft.GestureDetector(
+            content=main_content,
+            on_keyboard_event=self._on_task_list_keyboard,
+        )
+
         app_column = ft.Column(
             spacing=0,
-            controls=[top_bar, main_content, status_bar],
+            controls=[top_bar, main_row_wrapper, status_bar],
             expand=True,
         )
 
@@ -635,7 +648,22 @@ class LeadershipOSApp:
         )]
         next_title = pending[0].title if pending else ""
 
-        # ── Build new sidebar and panel ──────────────────────────────
+        # Compute break info (Phase 6)
+        break_type_label = ""
+        break_elapsed = ""
+        if self._current_state == "break" and self.break_engine and self._current_day:
+            active_break = self.break_engine.get_active_break(self._current_day.id)
+            if active_break:
+                break_type_label = active_break.break_type.title()
+                # Calculate elapsed time for this break
+                try:
+                    start = datetime.fromisoformat(active_break.start_time)
+                    break_seconds = int((datetime.now() - start).total_seconds())
+                    break_elapsed = format_duration_short(max(0, break_seconds))
+                except (ValueError, OSError):
+                    break_elapsed = format_duration_short(0)
+
+        # Build new sidebar and panel
         new_sidebar = build_sidebar(
             app_state=self._current_state,
             focus_time=focus_time,
@@ -659,6 +687,8 @@ class LeadershipOSApp:
             progress_status=progress_status,
             focus_time_display=focus_short,
             next_task_title=next_title,
+            break_type_label=break_type_label,
+            break_elapsed=break_elapsed,
             on_pause=self._pause_active_task,
             on_complete=self._complete_active_task,
             on_start_break=self._start_break,
@@ -685,12 +715,18 @@ class LeadershipOSApp:
         if self._section_completed.current:
             self._section_completed.current.visible = has_completed
 
-        # Build task and completed cards
+        # Build task and completed cards with keyboard selection support
         task_cards = []
         completed_cards = []
+        pending_for_nav = [t for t in tasks if t.status not in (TaskStatus.COMPLETED.value, TaskStatus.ARCHIVED.value, TaskStatus.DELETED.value)]
+        # Compute the selected task ID (if any) from the pending list
+        selected_id = None
+        if 0 <= self._selected_task_index < len(pending_for_nav):
+            selected_id = pending_for_nav[self._selected_task_index].id
         for task in tasks:
             is_active = task.id == active_task_id
             is_done = task.status == TaskStatus.COMPLETED.value
+            is_selected = (task.id == selected_id)
             card = build_task_card(
                 task_id=task.id,
                 title=task.title,
@@ -698,6 +734,7 @@ class LeadershipOSApp:
                 status=task.status,
                 is_active=is_active,
                 is_completed=is_done,
+                is_selected=is_selected,
                 deadline=task.deadline or "",
                 estimated_minutes=task.estimated_minutes or 0,
                 actual_seconds=task.actual_seconds or 0,
@@ -835,16 +872,10 @@ class LeadershipOSApp:
             logger.error("Failed to pause task: %s", e)
 
     def _start_break(self) -> None:
-        """Start a break — pauses active task."""
+        """Show break type selection dialog, then start the break."""
         if not self.break_engine or not self._current_day:
             return
-        try:
-            self.break_engine.start_break(day_id=self._current_day.id)
-            self._current_state = "break"
-            self._refresh_ui()
-            logger.info("Break started")
-        except Exception as e:
-            logger.error("Failed to start break: %s", e)
+        self._show_break_type_dialog()
 
     def _resume_from_break(self) -> None:
         """Resume work from break."""
@@ -912,6 +943,7 @@ class LeadershipOSApp:
         """Navigate to the Today/Planning view."""
         self._nav_view = "today"
         self._current_state = "planning"
+        self._selected_task_index = -1
         self._show_today_workspace()
         self._refresh_ui()
         logger.info("Navigated to Today")
@@ -1217,6 +1249,199 @@ class LeadershipOSApp:
 
     def _on_shortcut_escape(self) -> None:
         self._hide_command_palette()
+
+    # ─── Carry Forward (Phase 4) ────────────────────────────────────
+
+    def _check_carry_forward(self) -> None:
+        """Check for unfinished tasks from previous days and show dialog if needed."""
+        if not self.db or not self._current_day:
+            return
+
+        # Get previous days that have incomplete tasks
+        previous_days = self.db.get_previous_days(limit=5)
+        incomplete: list = []
+        day_map: dict[str, str] = {}
+        from leadership_os.core.enums import TaskStatus as TS
+        for prev_day in previous_days:
+            if prev_day.id == self._current_day.id:
+                continue
+            tasks = self.db.get_tasks_by_day(prev_day.id)
+            for t in tasks:
+                if t.status in (TS.PENDING.value, TS.ACTIVE.value, TS.PAUSED.value, TS.CARRIED_FORWARD.value):
+                    incomplete.append(t)
+                    day_map[t.id] = prev_day.date
+
+        if incomplete:
+            self._carry_forward_tasks = incomplete
+            self._task_day_map = day_map
+            self._show_carry_forward_workspace()
+        else:
+            self._carry_forward_tasks = []
+            self._task_day_map = {}
+
+    def _show_carry_forward_workspace(self) -> None:
+        """Replace center workspace with the carry-forward review screen."""
+        if not self._main_row:
+            return
+        from leadership_os.ui.widgets.carry_forward_dialog import build_carry_forward_dialog
+
+        dialog = build_carry_forward_dialog(
+            tasks=self._carry_forward_tasks,
+            task_day_map=self._task_day_map,
+            on_continue=self._on_carry_continue,
+            on_archive=self._on_carry_archive,
+            on_delete=self._on_carry_delete,
+            on_done=self._on_carry_done,
+        )
+        self._nav_view = "carry_forward"
+        self._main_row.controls[1] = dialog
+        if self.page:
+            self.page.update()
+
+    def _on_carry_continue(self, task_id: str) -> None:
+        """Carry a task forward into today's plan using the engine."""
+        if not self.task_engine or not self._current_day:
+            return
+        try:
+            task = self.task_engine.get_task(task_id)
+            if task:
+                # Use the engine's carry_forward_tasks method
+                self.task_engine.carry_forward_tasks(task.day_id, self._current_day.id)
+            # Remove from local list and refresh
+            self._carry_forward_tasks = [t for t in self._carry_forward_tasks if t.id != task_id]
+            if not self._carry_forward_tasks:
+                self._on_carry_done()
+            else:
+                self._show_carry_forward_workspace()
+        except Exception as e:
+            logger.error("Failed to carry forward task: %s", e)
+
+    def _on_carry_archive(self, task_id: str) -> None:
+        """Archive a task instead of carrying it forward."""
+        try:
+            if self.task_engine:
+                self.task_engine.archive_task(task_id)
+            self._carry_forward_tasks = [t for t in self._carry_forward_tasks if t.id != task_id]
+            if not self._carry_forward_tasks:
+                self._on_carry_done()
+            else:
+                self._show_carry_forward_workspace()
+        except Exception as e:
+            logger.error("Failed to archive task: %s", e)
+
+    def _on_carry_delete(self, task_id: str) -> None:
+        """Delete a task permanently."""
+        try:
+            if self.task_engine:
+                self.task_engine.delete_task(task_id)
+            self._carry_forward_tasks = [t for t in self._carry_forward_tasks if t.id != task_id]
+            if not self._carry_forward_tasks:
+                self._on_carry_done()
+            else:
+                self._show_carry_forward_workspace()
+        except Exception as e:
+            logger.error("Failed to delete task: %s", e)
+
+    def _on_carry_done(self) -> None:
+        """Carry-forward review complete — switch to today view."""
+        self._carry_forward_tasks = []
+        self._task_day_map = {}
+        self.switch_to_today()
+
+    # ─── Break Dialog (Phase 6) ──────────────────────────────────────
+
+    def _show_break_type_dialog(self) -> None:
+        """Show break type selection dialog in center workspace."""
+        if not self._main_row:
+            return
+        from leadership_os.ui.widgets.break_dialog import build_break_dialog
+
+        dialog = build_break_dialog(
+            on_confirm=self._on_break_confirm,
+            on_cancel=self._on_break_cancel,
+        )
+        self._nav_view = "break_dialog"
+        self._main_row.controls[1] = dialog
+        if self.page:
+            self.page.update()
+
+    def _on_break_confirm(self, break_type: str, notes: str) -> None:
+        """User confirmed break type — start the break."""
+        if not self.break_engine or not self._current_day:
+            return
+        try:
+            self.break_engine.start_break(
+                day_id=self._current_day.id,
+                break_type=break_type,
+                notes=notes,
+            )
+            self._current_state = "break"
+            self._show_today_workspace()
+            self._refresh_ui()
+            logger.info("Break started: %s", break_type)
+        except Exception as e:
+            logger.error("Failed to start break: %s", e)
+            self._show_today_workspace()
+
+    def _on_break_cancel(self) -> None:
+        """User cancelled break dialog."""
+        self._show_today_workspace()
+        self._refresh_ui()
+
+    # ─── Keyboard Task Navigation (Phase 5) ──────────────────────────
+
+    def _on_task_list_keyboard(self, e: ft.KeyboardEvent) -> None:
+        """Handle arrow key navigation in the task list.
+
+        Ctrl+Up/Down: reorder tasks
+        Up/Down: navigate task selection
+        Enter: activate selected task
+        """
+        if self._nav_view != "today":
+            return
+
+        if not self._current_day:
+            return
+
+        tasks = self.task_engine.get_tasks(self._current_day.id) if self.task_engine else []
+        pending = [t for t in tasks if t.status not in (TaskStatus.COMPLETED.value, TaskStatus.ARCHIVED.value, TaskStatus.DELETED.value)]
+
+        if not pending:
+            return
+
+        # Ctrl+Up / Ctrl+Down: reorder
+        if e.ctrl and e.key in ("Arrow Up", "Arrow Down"):
+            if self._selected_task_index < 0 or self._selected_task_index >= len(pending):
+                return
+            if e.key == "Arrow Up" and self._selected_task_index > 0:
+                # Swap with previous
+                pending[self._selected_task_index], pending[self._selected_task_index - 1] = \
+                    pending[self._selected_task_index - 1], pending[self._selected_task_index]
+                self._selected_task_index -= 1
+            elif e.key == "Arrow Down" and self._selected_task_index < len(pending) - 1:
+                # Swap with next
+                pending[self._selected_task_index], pending[self._selected_task_index + 1] = \
+                    pending[self._selected_task_index + 1], pending[self._selected_task_index]
+                self._selected_task_index += 1
+
+            # Persist new order
+            self.task_engine.reorder_tasks(
+                self._current_day.id,
+                [t.id for t in pending],
+            )
+            self._refresh_ui()
+            return
+
+        # Up/Down: navigate selection
+        if e.key == "Arrow Down":
+            self._selected_task_index = min(self._selected_task_index + 1, len(pending) - 1)
+            self._refresh_ui()
+        elif e.key == "Arrow Up":
+            self._selected_task_index = max(self._selected_task_index - 1, 0)
+            self._refresh_ui()
+        elif e.key == "Enter" and self._selected_task_index >= 0:
+            selected = pending[self._selected_task_index]
+            self._activate_task(selected.id)
 
     # ─── Lifecycle ────────────────────────────────────────────────────
 
