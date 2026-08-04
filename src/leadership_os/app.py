@@ -100,6 +100,7 @@ class LeadershipOSApp:
         self._tray = None
         self._shortcut_handler = None
         self._instance_lock = None
+        self._overlay = None  # Floating overlay window (Phase 8)
 
         # UI References (updated during build)
         self._root_column = None  # ft.Column root of page
@@ -238,6 +239,22 @@ class LeadershipOSApp:
         self.event_bus.subscribe("cmd_end_break", self._on_tray_end_break)
         self.event_bus.subscribe(CONFIG_CHANGED, self._on_config_changed)
         self._tray.start()
+
+        # ── Floating Overlay (Phase 8) ────────────────────────────
+        show_overlay = self.config.get("ui", "show_overlay", True)
+        if show_overlay:
+            from leadership_os.ui.overlay import OverlayWindow
+            self._overlay = OverlayWindow(
+                on_show_main=self._on_tray_show_window,
+                on_pause=self._pause_active_task,
+                on_complete=self._complete_active_task,
+                on_start_break=self._start_break,
+                on_resume=self._resume_from_break,
+                on_end_break=self._end_break,
+                config=self.config.get_section("ui"),
+            )
+            self._overlay.start()
+            logger.info("Floating overlay started")
 
         # ── Keyboard shortcuts ────────────────────────────────────
         from leadership_os.ui.shortcut_handler import ShortcutHandler
@@ -588,6 +605,29 @@ class LeadershipOSApp:
         if self._tray:
             focus_label = format_duration_short(focus_time)
             self._tray.update_progress(focus_label, completed, total)
+
+        # Update floating overlay (Phase 8)
+        if self._overlay:
+            active_id = self.state.get_active_task_id() if self.state else None
+            current_task = self.task_engine.get_task(active_id) if active_id and self.task_engine else None
+            overlay_data = {
+                "task": current_task.title if current_task else "",
+                "timer": format_duration(
+                    self.timer_engine.get_elapsed(active_id) if self.timer_engine and active_id else 0
+                ),
+                "state": "working" if active_id else ("break" if self._current_state == "break" else "idle"),
+                "state_label": self._get_status_text(),
+                "priority": current_task.priority.upper() if current_task else "",
+                "next_task": (tasks[0].title if tasks else "") if not active_id else (
+                    (tasks[1].title if len(tasks) > 1 else "") if current_task else ""
+                ),
+            }
+            # Compute proper next task
+            pending = [t for t in tasks if t.status not in (
+                TaskStatus.COMPLETED.value, TaskStatus.ARCHIVED.value, TaskStatus.DELETED.value
+            ) and t.id != active_id]
+            overlay_data["next_task"] = pending[0].title if pending else ""
+            self._overlay.send_update(overlay_data)
 
         # Only rebuild main view when on today view
         if self._nav_view == "today":
@@ -1455,6 +1495,17 @@ class LeadershipOSApp:
     def on_stop(self) -> None:
         """Save state on shutdown."""
         logger.info("Leadership OS shutting down")
+
+        # Stop overlay and save position
+        if self._overlay:
+            try:
+                pos_x, pos_y = self._overlay.get_position()
+                self.config.set("ui", "overlay_position_x", pos_x)
+                self.config.set("ui", "overlay_position_y", pos_y)
+                self.config.save()
+                self._overlay.stop()
+            except Exception as e:
+                logger.warning("Error stopping overlay: %s", e)
 
         # Stop tray
         if self._tray:
