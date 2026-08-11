@@ -280,10 +280,11 @@ def build_execution_panel(
                                 ),
                             ),
 
-                            # Start Break
+                            # Start Break — only when NOT on a break
                             ft.TextButton(
                                 content="☕  Start Break",
                                 disabled=not has_task,
+                                visible=not on_break,
                                 on_click=lambda _: on_start_break(),
                                 height=30,
                                 style=ft.ButtonStyle(
@@ -293,30 +294,30 @@ def build_execution_panel(
                                 ),
                             ),
 
-                            # Separator
-                            ft.Divider(height=1, color="#2D2D4A0D"),
+                            # Separator — only between the two button groups
+                            ft.Divider(height=1, color="#2D2D4A0D", visible=on_break),
 
-                            # Resume — BREAK PRIMARY
+                            # Resume — BREAK PRIMARY (only while on break)
                             ft.Button(
                                 content=ft.Text("▶  Resume Work", color="white"),
-                                disabled=not on_break,
+                                visible=on_break,
                                 on_click=lambda _: on_resume(),
                                 height=40,
-                                bgcolor="#66A66B" if on_break else "#66A66B35",
+                                bgcolor="#66A66B",
                                 style=ft.ButtonStyle(
                                     shape=ft.RoundedRectangleBorder(radius=8),
                                 ),
                             ),
 
-                            # End Break
+                            # End Break — only while on a break
                             ft.TextButton(
                                 content="■  End Break",
-                                disabled=not on_break,
+                                visible=on_break,
                                 on_click=lambda _: on_end_break(),
                                 height=30,
                                 style=ft.ButtonStyle(
-                                    color="#9898B8B0" if on_break else "#9898B840",
-                                    bgcolor="#2D2D4A1A" if on_break else "#2D2D4A0D",
+                                    color="#9898B8B0",
+                                    bgcolor="#2D2D4A1A",
                                     shape=ft.RoundedRectangleBorder(radius=6),
                                 ),
                             ),

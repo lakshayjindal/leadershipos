@@ -303,6 +303,7 @@ class LeadershipOSApp:
         minimize_to_tray = self.config.get("startup", "minimize_to_tray", True)
         if minimize_to_tray:
             page.window.prevent_close = True
+            page.window.on_event = self._on_window_event
 
         # Build the UI
         self._build_ui()
@@ -542,8 +543,29 @@ class LeadershipOSApp:
                     # Date
                     ft.Text("Today, July 20", ref=self._date_label, color="#5A5A80", size=9),
                     ft.Container(height=4),
-                    # Today's Plan heading
-                    ft.Text("Today's Plan", color="#E8E8F0", size=18, weight=ft.FontWeight.W_700),
+                    # Today's Plan heading + End Day action
+                    ft.Row(
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            ft.Text("Today's Plan", color="#E8E8F0", size=18, weight=ft.FontWeight.W_700),
+                            ft.Container(expand=True),
+                            ft.TextButton(
+                                content=ft.Row(
+                                    spacing=6,
+                                    controls=[
+                                        ft.Icon(ft.Icons.EDIT_CALENDAR, size=16, color="#C4A35A"),
+                                        ft.Text("End Day", color="#C4A35A", size=12, weight=ft.FontWeight.W_600),
+                                    ],
+                                ),
+                                on_click=lambda _: self.switch_to_review(),
+                                style=ft.ButtonStyle(
+                                    bgcolor="#C4A35A18",
+                                    shape=ft.RoundedRectangleBorder(radius=8),
+                                    padding=ft.Padding(12, 6, 12, 6),
+                                ),
+                            ),
+                        ],
+                    ),
                     ft.Container(height=12),
                     # Task input
                     task_input_row,
@@ -1140,6 +1162,25 @@ class LeadershipOSApp:
                 self.page.update()
 
     # ─── Tray & Window Event Handlers ───────────────────────────────
+
+    def _on_window_event(self, e: ft.WindowEvent) -> None:
+        """Handle native window events (Flet 0.86).
+
+        When the close button (X) is clicked with minimize_to_tray enabled,
+        the OS close request is intercepted (prevent_close) and reported here
+        as WindowEventType.CLOSE — we hide the window to tray instead of
+        quitting. The tray's quit action disables prevent_close before
+        requesting close, so that path still exits the app.
+        """
+        if (
+            e.type == ft.WindowEventType.CLOSE
+            and self.page
+            and self.page.window
+            and self.page.window.prevent_close
+        ):
+            logger.info("Window close requested — minimizing to tray")
+            self.page.window.visible = False
+            self.page.update()
 
     def _on_tray_show_window(self) -> None:
         """Show the main window (called from tray or overlay)."""
