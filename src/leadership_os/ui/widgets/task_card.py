@@ -1,13 +1,25 @@
 """TaskCard — displays a single task in the task list (Flet).
 
-Shows title, priority indicator, deadline, estimated time, and status.
+Apple-style light card: white surface, hairline border, ink text,
+priority pill badges, Action Blue active state.
 """
 
 from __future__ import annotations
 
 import flet as ft
 
-from leadership_os.ui.theme import PRIORITY_RGBA, PRIORITY_LABELS
+from leadership_os.ui.theme import (
+    GRAY_2,
+    GRAY_3,
+    GRAY_5,
+    HAIRLINE,
+    INK,
+    PEARL,
+    PRIMARY,
+    PRIORITY_LABELS,
+    PRIORITY_RGBA,
+    Theme,
+)
 from leadership_os.utils.time_utils import format_duration_short
 
 
@@ -48,23 +60,23 @@ def build_task_card(
     Returns:
         A Container representing the task card.
     """
-    priority_rgba = PRIORITY_RGBA.get(priority, (0.408, 0.408, 0.627, 1))
+    priority_rgba = PRIORITY_RGBA.get(priority, (0.525, 0.525, 0.545, 1))
     priority_label = PRIORITY_LABELS.get(priority, "MEDIUM")
     accent_color = f"rgba({int(priority_rgba[0]*255)},{int(priority_rgba[1]*255)},{int(priority_rgba[2]*255)},{priority_rgba[3]})"
 
     # Status icon
     if is_active:
         status_icon = ft.Icons.PLAY_CIRCLE
-        status_color = "#4A6FA5"
+        status_color = PRIMARY
     elif is_completed:
         status_icon = ft.Icons.CHECK_CIRCLE
-        status_color = "#66A66B"
+        status_color = Theme.color("success")
     elif status == "paused":
         status_icon = ft.Icons.PAUSE_CIRCLE
-        status_color = "#6868A0"
+        status_color = GRAY_3
     else:
         status_icon = ft.Icons.RADIO_BUTTON_UNCHECKED
-        status_color = "#9898B8"
+        status_color = GRAY_2
 
     # Time display
     if actual_seconds > 0:
@@ -75,16 +87,16 @@ def build_task_card(
         time_text = ""
 
     # Title color
-    title_color = "#E8E8F0" if not is_completed else "#9898B8"
+    title_color = INK if not is_completed else GRAY_3
     title_opacity = 0.6 if is_completed else 1.0
 
     return ft.Container(
         height=48,
-        bgcolor="#1A1A30" if is_selected else "#15152B",
-        border_radius=8,
+        bgcolor=PEARL if is_selected else "#ffffff",
+        border_radius=Theme.radius["sm"],
         border=ft.Border.all(
-            1.5 if is_selected else 1,
-            "#4A6FA5" if is_selected else "#2D2D4A2E",
+            2 if is_selected else 1,
+            PRIMARY if is_selected else HAIRLINE,
         ),
         padding=0,
         content=ft.Row(
@@ -134,7 +146,7 @@ def build_task_card(
                                         height=16,
                                         bgcolor=f"rgba({int(priority_rgba[0]*255)},{int(priority_rgba[1]*255)},{int(priority_rgba[2]*255)},50)",
                                         border_radius=8,
-                                        alignment=ft.Alignment(0,0),
+                                        alignment=ft.Alignment(0, 0),
                                         content=ft.Text(
                                             priority_label,
                                             color=accent_color,
@@ -145,14 +157,14 @@ def build_task_card(
                                     # Time
                                     ft.Text(
                                         time_text,
-                                        color="#9898B8" if time_text else "transparent",
+                                        color=GRAY_3 if time_text else "transparent",
                                         size=10,
                                         visible=bool(time_text),
                                     ),
                                     # Deadline
                                     ft.Text(
                                         deadline,
-                                        color="#C45B5B" if deadline else "transparent",
+                                        color=Theme.color("error") if deadline else "transparent",
                                         size=10,
                                         visible=bool(deadline),
                                     ),
@@ -168,7 +180,7 @@ def build_task_card(
                         ft.IconButton(
                             icon=ft.Icons.EDIT,
                             icon_size=13,
-                            icon_color="#4A4A70",
+                            icon_color=GRAY_5,
                             width=22,
                             height=22,
                             on_click=lambda _: on_edit(),
@@ -176,7 +188,7 @@ def build_task_card(
                         ft.IconButton(
                             icon=ft.Icons.DELETE_OUTLINE,
                             icon_size=13,
-                            icon_color="#4A4A70",
+                            icon_color=GRAY_5,
                             width=22,
                             height=22,
                             on_click=lambda _: on_delete(),

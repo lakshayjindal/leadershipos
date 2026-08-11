@@ -8,12 +8,23 @@ cancel and return to the plan.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import flet as ft
 
+from leadership_os.ui.theme import (
+    GRAY_2,
+    GRAY_3,
+    GRAY_4,
+    HAIRLINE,
+    INK,
+    ON_PRIMARY,
+    PARCHMENT,
+    PEARL,
+    PRIMARY,
+    Theme,
+)
 from leadership_os.utils.time_utils import format_duration_short
-
 
 # Forward declarations for type hints
 OnFinalize = Callable[[dict[str, str]], None]
@@ -21,21 +32,21 @@ OnSkip = Callable[[], None]
 OnCancel = Callable[[], None]
 
 
-def _stat_card(label: str, value: str, color: str = "#E8E8F0") -> ft.Container:
+def _stat_card(label: str, value: str, color: str = INK) -> ft.Container:
     """Build a compact summary stat card."""
     return ft.Container(
         expand=True,
         height=70,
-        bgcolor="#15152B",
-        border_radius=8,
-        border=ft.Border.all(1, "#2D2D4A20"),
+        bgcolor=PEARL,
+        border_radius=Theme.radius["lg"],
+        border=ft.Border.all(1, HAIRLINE),
         padding=ft.Padding(10, 10, 10, 10),
         content=ft.Column(
             spacing=4,
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
                 ft.Text(value, color=color, size=22, weight=ft.FontWeight.W_700),
-                ft.Text(label, color="#747496", size=9, weight=ft.FontWeight.W_700),
+                ft.Text(label, color=GRAY_3, size=9, weight=ft.FontWeight.W_700),
             ],
         ),
     )
@@ -45,7 +56,7 @@ def _section_header(title: str) -> ft.Container:
     """Build a small uppercase section header."""
     return ft.Container(
         padding=ft.Padding(0, 16, 0, 8),
-        content=ft.Text(title, color="#9898B8", size=10, weight=ft.FontWeight.W_700),
+        content=ft.Text(title, color=GRAY_3, size=10, weight=ft.FontWeight.W_700),
     )
 
 
@@ -84,12 +95,12 @@ def _text_field(
         max_lines=4,
         height=height,
         border=ft.InputBorder.OUTLINE,
-        border_color="#2D2D4A6B",
-        focused_border_color="#4A6FA5",
-        bgcolor="#1A1A2E",
-        color="#E8E8F0",
-        hint_style=ft.TextStyle(color="#747496", size=12),
-        label_style=ft.TextStyle(color="#9898B8", size=12),
+        border_color=HAIRLINE,
+        focused_border_color=PRIMARY,
+        bgcolor="#ffffff",
+        color=INK,
+        hint_style=ft.TextStyle(color=GRAY_4, size=12),
+        label_style=ft.TextStyle(color=GRAY_3, size=12),
     )
 
 
@@ -202,16 +213,16 @@ def build_review_screen(
     if tomorrow_tasks:
         for title in tomorrow_tasks:
             tomorrow_controls.append(
-                ft.Text(f"  •  {title}", color="#9898B8", size=12)
+                ft.Text(f"  •  {title}", color=GRAY_2, size=12)
             )
     else:
         tomorrow_controls.append(
-            ft.Text("No pending tasks for tomorrow.", color="#5A5A80", size=12, italic=True)
+            ft.Text("No pending tasks for tomorrow.", color=GRAY_4, size=12, italic=True)
         )
 
     return ft.Container(
         expand=True,
-        bgcolor="#0D0D1A",
+        bgcolor=PARCHMENT,
         padding=ft.Padding(24, 16, 24, 12),
         content=ft.Column(
             spacing=0,
@@ -219,7 +230,7 @@ def build_review_screen(
                 # Header
                 ft.Row(
                     controls=[
-                        ft.Text("End-of-Day Review", color="#E8E8F0", size=18, weight=ft.FontWeight.W_700),
+                        ft.Text("End-of-Day Review", color=INK, size=18, weight=ft.FontWeight.W_700),
                         ft.Container(expand=True),
                     ],
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -227,7 +238,7 @@ def build_review_screen(
                 ft.Container(height=4),
                 ft.Text(
                     "Reflect on today before you close out. Your answers become part of the daily journal.",
-                    color="#747496", size=11,
+                    color=GRAY_3, size=11,
                 ),
                 # Summary
                 _section_header("TODAY'S SUMMARY"),
@@ -238,9 +249,9 @@ def build_review_screen(
                 # Tomorrow preview
                 _section_header("TOMORROW"),
                 ft.Container(
-                    bgcolor="#15152B",
-                    border_radius=8,
-                    border=ft.Border.all(1, "#2D2D4A20"),
+                    bgcolor=PEARL,
+                    border_radius=Theme.radius["lg"],
+                    border=ft.Border.all(1, HAIRLINE),
                     padding=ft.Padding(12, 10, 12, 10),
                     content=ft.Column(spacing=4, controls=tomorrow_controls),
                 ),
@@ -250,21 +261,21 @@ def build_review_screen(
                     spacing=8,
                     controls=[
                         ft.TextButton(
-                            content=ft.Text("Cancel", color="#9898B8"),
+                            content=ft.Text("Cancel", color=GRAY_3),
                             on_click=lambda _: on_cancel() if on_cancel else None,
                         ),
                         ft.TextButton(
-                            content=ft.Text("Skip Review", color="#C45B5B"),
+                            content=ft.Text("Skip Review", color=Theme.color("error")),
                             on_click=lambda _: on_skip() if on_skip else None,
                         ),
                         ft.Container(expand=True),
                         ft.Button(
                             ref=finalize_button_ref,
-                            content=ft.Text("Finalize Day", color="white"),
-                            bgcolor="#66A66B",
+                            content=ft.Text("Finalize Day", color=ON_PRIMARY),
+                            bgcolor=PRIMARY,
                             on_click=_handle_finalize,
                             style=ft.ButtonStyle(
-                                shape=ft.RoundedRectangleBorder(radius=8),
+                                shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"]),
                             ),
                         ),
                     ],

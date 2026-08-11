@@ -28,6 +28,15 @@ from leadership_os.core.enums import TaskStatus
 from leadership_os.core.event_bus import CONFIG_CHANGED
 from leadership_os.core.models import Reflection
 from leadership_os.ui.theme import build_flet_theme
+from leadership_os.ui.theme import (
+    GRAY_2,
+    GRAY_3,
+    HAIRLINE,
+    INK,
+    PARCHMENT,
+    PRIMARY,
+    Theme,
+)
 from leadership_os.ui.widgets.execution_panel import build_execution_panel
 from leadership_os.ui.widgets.review_screen import build_review_screen
 from leadership_os.ui.widgets.sidebar import build_sidebar
@@ -204,9 +213,9 @@ class LeadershipOSApp:
         self.page = page
         page.title = "Leadership OS"
         page.theme = build_flet_theme()
-        page.theme_mode = ft.ThemeMode.DARK
+        page.theme_mode = self._resolve_theme_mode()
         page.padding = 0
-        page.bgcolor = "#0D0D1A"
+        page.bgcolor = PARCHMENT
         page.window.min_width = 900
         page.window.min_height = 600
         page.window.width = 1200
@@ -333,6 +342,7 @@ class LeadershipOSApp:
             on_search=self.show_search,
             on_settings=self.switch_to_settings,
             on_command_palette=self.show_command_palette,
+            on_quit=self._on_quit,
         )
 
         # Main content row
@@ -411,26 +421,26 @@ class LeadershipOSApp:
         empty_state = ft.Container(
             ref=self._empty_state,
             height=196,
-            bgcolor="#15152B",
-            border_radius=10,
-            border=ft.Border.all(1, "#2D2D4A20"),
+            bgcolor="#ffffff",
+            border_radius=Theme.radius["lg"],
+            border=ft.Border.all(1, HAIRLINE),
             padding=ft.Padding(20, 16, 20, 16),
             content=ft.Column(
                 spacing=0,
                 controls=[
-                    ft.Icon(ft.Icons.WB_SUNNY_OUTLINED, size=26, color="#9898B8"),
+                    ft.Icon(ft.Icons.WB_SUNNY_OUTLINED, size=26, color=GRAY_2),
                     ft.Container(height=12),
-                    ft.Text("Your workspace is clear", color="#9898B8", size=14, weight=ft.FontWeight.W_700),
+                    ft.Text("Your workspace is clear", color=INK, size=14, weight=ft.FontWeight.W_700),
                     ft.Container(height=6),
                     ft.Text(
                         "Add a task above to begin. Your focus timer and progress will appear here as you work.",
-                        color="#747496", size=11, height=1.5,
+                        color=GRAY_3, size=11, height=1.5,
                     ),
                     ft.Container(height=12),
-                    ft.Text("Quick tips", color="#5A5A80", size=9, weight=ft.FontWeight.W_700),
+                    ft.Text("Quick tips", color=GRAY_3, size=9, weight=ft.FontWeight.W_700),
                     ft.Container(height=4),
-                    ft.Text("  •  Press Enter to add a task", color="#5A5A80", size=10),
-                    ft.Text("  •  Click a task to start working on it", color="#5A5A80", size=10),
+                    ft.Text("  •  Press Enter to add a task", color=GRAY_3, size=10),
+                    ft.Text("  •  Click a task to start working on it", color=GRAY_3, size=10),
                 ],
             ),
         )
@@ -441,23 +451,24 @@ class LeadershipOSApp:
             height=0,
             opacity=0,
             visible=False,
-            bgcolor="#1A1A2E",
-            border_radius=10,
+            bgcolor="#ffffff",
+            border_radius=Theme.radius["lg"],
+            border=ft.Border.all(1, HAIRLINE),
             padding=ft.Padding(14, 10, 14, 10),
             content=ft.Row(
                 spacing=12,
                 controls=[
                     # Accent bar
-                    ft.Container(width=3, height=36, bgcolor="#4A6FA5", border_radius=1.5),
+                    ft.Container(width=3, height=36, bgcolor=PRIMARY, border_radius=1.5),
                     ft.Column(
                         spacing=2,
                         expand=True,
                         controls=[
-                            ft.Text("CURRENT FOCUS", color="#9898B8", size=9, weight=ft.FontWeight.W_700),
-                            ft.Text("", ref=self._focus_title, color="#E8E8F0", size=16, weight=ft.FontWeight.W_700),
+                            ft.Text("CURRENT FOCUS", color=GRAY_3, size=9, weight=ft.FontWeight.W_700),
+                            ft.Text("", ref=self._focus_title, color=INK, size=16, weight=ft.FontWeight.W_700),
                         ],
                     ),
-                    ft.Text("00:00", ref=self._focus_time, color="#9898B8", size=16, weight=ft.FontWeight.W_700),
+                    ft.Text("00:00", ref=self._focus_time, color=GRAY_3, size=16, weight=ft.FontWeight.W_700),
                 ],
             ),
         )
@@ -472,18 +483,18 @@ class LeadershipOSApp:
                     width=320,
                     height=36,
                     border=ft.InputBorder.OUTLINE,
-                    border_color="#2D2D4A6B",
-                    focused_border_color="#4A6FA5",
-                    bgcolor="#1A1A2E",
-                    text_style=ft.TextStyle(color="#E8E8F0", size=13),
-                    hint_style=ft.TextStyle(color="#747496", size=13),
+                    border_color=HAIRLINE,
+                    focused_border_color=PRIMARY,
+                    bgcolor="#ffffff",
+                    text_style=ft.TextStyle(color=INK, size=13),
+                    hint_style=ft.TextStyle(color=GRAY_3, size=13),
                     dense=True,
                     on_submit=lambda _: self.on_task_submit(),
                 ),
                 ft.Container(
                     width=36,
                     height=36,
-                    bgcolor="#4A6FA5",
+                    bgcolor=PRIMARY,
                     border_radius=ft.BorderRadius(top_left=0, top_right=8, bottom_right=8, bottom_left=0),
                     alignment=ft.Alignment(0,0),
                     on_click=lambda _: self.on_task_submit(),
@@ -512,8 +523,8 @@ class LeadershipOSApp:
             content=ft.Row(
                 spacing=8,
                 controls=[
-                    ft.Text("TASKS", color="#9898B8", size=9, weight=ft.FontWeight.W_700),
-                    ft.Divider(height=1, color="#2D2D4A15"),
+                    ft.Text("TASKS", color=GRAY_2, size=9, weight=ft.FontWeight.W_700),
+                    ft.Divider(height=1, color="#f0f0f0"),
                 ],
             ),
         )
@@ -527,40 +538,40 @@ class LeadershipOSApp:
             content=ft.Row(
                 spacing=8,
                 controls=[
-                    ft.Text("COMPLETED", color="#66A66B8C", size=9, weight=ft.FontWeight.W_700),
-                    ft.Divider(height=1, color="#2D2D4A0D"),
+                    ft.Text("COMPLETED", color=Theme.color("success"), size=9, weight=ft.FontWeight.W_700, opacity=0.55),
+                    ft.Divider(height=1, color="#f0f0f0"),
                 ],
             ),
         )
 
         return ft.Container(
             expand=True,
-            bgcolor="#0D0D1A",
+            bgcolor=PARCHMENT,
             padding=ft.Padding(24, 16, 24, 12),
             content=ft.Column(
                 spacing=0,
                 controls=[
                     # Date
-                    ft.Text("Today, July 20", ref=self._date_label, color="#5A5A80", size=9),
+                    ft.Text("Today, July 20", ref=self._date_label, color=GRAY_3, size=9),
                     ft.Container(height=4),
                     # Today's Plan heading + End Day action
                     ft.Row(
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
-                            ft.Text("Today's Plan", color="#E8E8F0", size=18, weight=ft.FontWeight.W_700),
+                            ft.Text("Today's Plan", color=INK, size=18, weight=ft.FontWeight.W_700),
                             ft.Container(expand=True),
                             ft.TextButton(
                                 content=ft.Row(
                                     spacing=6,
                                     controls=[
-                                        ft.Icon(ft.Icons.EDIT_CALENDAR, size=16, color="#C4A35A"),
-                                        ft.Text("End Day", color="#C4A35A", size=12, weight=ft.FontWeight.W_600),
+                                        ft.Icon(ft.Icons.EDIT_CALENDAR, size=16, color=PRIMARY),
+                                        ft.Text("End Day", color=PRIMARY, size=12, weight=ft.FontWeight.W_600),
                                     ],
                                 ),
                                 on_click=lambda _: self.switch_to_review(),
                                 style=ft.ButtonStyle(
-                                    bgcolor="#C4A35A18",
-                                    shape=ft.RoundedRectangleBorder(radius=8),
+                                    bgcolor="#0066cc14",
+                                    shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"]),
                                     padding=ft.Padding(12, 6, 12, 6),
                                 ),
                             ),
@@ -845,8 +856,8 @@ class LeadershipOSApp:
             row = self._status_bar.content
             if isinstance(row, ft.Row):
                 row.controls = [
-                    ft.Text(f"Focus {focus_short}", color="#5A5A80", size=9),
-                    ft.Text(f"Done {int(completed)}", color="#5A5A80", size=9),
+                    ft.Text(f"Focus {focus_short}", color=GRAY_3, size=9),
+                    ft.Text(f"Done {int(completed)}", color=GRAY_3, size=9),
                     ft.Container(expand=True),
                 ]
 
@@ -1161,7 +1172,30 @@ class LeadershipOSApp:
             if self.page:
                 self.page.update()
 
+    def _resolve_theme_mode(self) -> ft.ThemeMode:
+        """Resolve the configured theme to a Flet ThemeMode.
+
+        The design system is light-first (Apple style); the setting is
+        honored when present, defaulting to light.
+        """
+        theme_name = (self.config.get("ui", "theme", "light") if self.config else "light").lower()
+        if theme_name == "dark":
+            return ft.ThemeMode.DARK
+        if theme_name == "system":
+            return ft.ThemeMode.SYSTEM
+        return ft.ThemeMode.LIGHT
+
     # ─── Tray & Window Event Handlers ───────────────────────────────
+
+    def _on_quit(self) -> None:
+        """Quit the app from the in-app Quit button.
+
+        Unlike the window close (X), which minimizes to tray, this fully
+        exits the application: disables prevent_close and closes the window,
+        letting on_stop run its normal shutdown sequence.
+        """
+        logger.info("Quit requested from UI")
+        self._on_tray_quit()
 
     def _on_window_event(self, e: ft.WindowEvent) -> None:
         """Handle native window events (Flet 0.86).
@@ -1231,10 +1265,14 @@ class LeadershipOSApp:
             logger.error("Failed to start task from overlay: %s", e)
 
     def _on_config_changed(self, event: str, data: dict[str, Any]) -> None:
-        """Reload shortcuts when config changes."""
+        """Reload shortcuts and apply theme when config changes."""
         if self._shortcut_handler:
             self._shortcut_handler.reload_shortcuts()
-        logger.info("Configuration change detected, shortcuts reloaded")
+        if self.page:
+            self.page.theme_mode = self._resolve_theme_mode()
+            self.page.bgcolor = PARCHMENT
+            self.page.update()
+        logger.info("Configuration change detected, shortcuts + theme reloaded")
 
     # ─── Palette Callbacks ──────────────────────────────────────────
 
@@ -1320,7 +1358,7 @@ class LeadershipOSApp:
             if self.page:
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text("Failed to save reflection.", color="white", size=13),
-                    bgcolor="#C45B5B",
+                    bgcolor=Theme.color("error"),
                     duration=3000,
                 )
                 self.page.snack_bar.open = True
@@ -1335,7 +1373,7 @@ class LeadershipOSApp:
             if self.page:
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text("Failed to generate journal.", color="white", size=13),
-                    bgcolor="#C45B5B",
+                    bgcolor=Theme.color("error"),
                     duration=3000,
                 )
                 self.page.snack_bar.open = True
@@ -1350,7 +1388,7 @@ class LeadershipOSApp:
             if self.page:
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text("Failed to close the day.", color="white", size=13),
-                    bgcolor="#C45B5B",
+                    bgcolor=Theme.color("error"),
                     duration=3000,
                 )
                 self.page.snack_bar.open = True
@@ -1365,7 +1403,7 @@ class LeadershipOSApp:
             journal_path = str(get_app_data_dir() / summary.journal_rel_path)
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text(f"Journal saved: {journal_path}", color="white", size=13),
-                bgcolor="#66A66B",
+                bgcolor=Theme.color("success"),
                 duration=3000,
             )
             self.page.snack_bar.open = True

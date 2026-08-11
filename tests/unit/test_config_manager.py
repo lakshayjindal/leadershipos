@@ -14,7 +14,7 @@ class TestConfigManager:
 
     def test_get_returns_default(self, config: ConfigManager):
         theme = config.get("ui", "theme")
-        assert theme == "dark"
+        assert theme == "light"
 
     def test_get_returns_fallback(self, config: ConfigManager):
         value = config.get("nonexistent", "key", fallback="default")
@@ -46,9 +46,9 @@ class TestConfigManager:
         assert config.get("ui", "overlay_opacity") == 0.5
 
     def test_reset_to_defaults(self, config: ConfigManager):
-        config.set("ui", "theme", "light")
+        config.set("ui", "theme", "dark")
         config.reset()
-        assert config.get("ui", "theme") == "dark"
+        assert config.get("ui", "theme") == "light"
 
     def test_validate_valid_config(self, config: ConfigManager):
         errors = config.validate()

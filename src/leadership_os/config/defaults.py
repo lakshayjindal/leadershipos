@@ -19,7 +19,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "work_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     },
     "ui": {
-        "theme": "dark",
+        "theme": "light",
         "overlay_opacity": 0.85,
         "overlay_position_x": -1,
         "overlay_position_y": 40,

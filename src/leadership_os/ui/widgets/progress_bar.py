@@ -1,11 +1,14 @@
 """ProgressBar — daily progress indicator (Flet).
 
 Shows task completion progress with a horizontal bar.
+Apple-style light: parchment track, Action Blue fill.
 """
 
 from __future__ import annotations
 
 import flet as ft
+
+from leadership_os.ui.theme import GRAY_5, PRIMARY, Theme
 
 
 def build_progress_bar(
@@ -27,11 +30,11 @@ def build_progress_bar(
 
     # Color based on progress
     if progress < 0.4:
-        color = "#C4A35A"  # Warm amber
+        color = Theme.color("warning")  # Warm amber
     elif progress < 0.75:
-        color = "#4A6FA5"  # Calm blue
+        color = PRIMARY  # Action Blue
     else:
-        color = "#66A66B"  # Muted green
+        color = Theme.color("success")  # Apple green
 
     return ft.Stack(
         controls=[
@@ -39,7 +42,7 @@ def build_progress_bar(
             ft.Container(
                 height=bar_height,
                 border_radius=bar_height / 2,
-                bgcolor="#33335050",
+                bgcolor=GRAY_5,
             ),
             # Filled progress
             ft.Container(

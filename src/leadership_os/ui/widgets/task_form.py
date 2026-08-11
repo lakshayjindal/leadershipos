@@ -2,11 +2,57 @@
 
 Minimal form that initially shows only the title field.
 Advanced options (priority, deadline, estimated time, notes) expand on request.
+Apple-style light: white inputs, hairline borders, Action Blue focus.
 """
 
 from __future__ import annotations
 
 import flet as ft
+
+from leadership_os.ui.theme import (
+    GRAY_2,
+    GRAY_3,
+    GRAY_4,
+    HAIRLINE,
+    INK,
+    ON_PRIMARY,
+    PARCHMENT,
+    PRIMARY,
+    Theme,
+)
+
+# Chip fill — soft parchment tint
+PARCHMENT_CHIP = PARCHMENT
+
+
+def _field(
+    value: str,
+    hint_text: str,
+    on_change,
+    height: int = 48,
+    keyboard_type=None,
+    multiline: bool = False,
+    min_lines: int = 1,
+    max_lines: int = 1,
+) -> ft.TextField:
+    """Build a consistently styled Apple-like input field."""
+    return ft.TextField(
+        value=value,
+        hint_text=hint_text,
+        on_change=on_change,
+        height=height,
+        max_length=200,
+        border=ft.InputBorder.OUTLINE,
+        border_color=HAIRLINE,
+        focused_border_color=PRIMARY,
+        bgcolor="#ffffff",
+        text_style=ft.TextStyle(color=INK, size=13),
+        hint_style=ft.TextStyle(color=GRAY_4, size=13),
+        keyboard_type=keyboard_type,
+        multiline=multiline,
+        min_lines=min_lines,
+        max_lines=max_lines,
+    )
 
 
 def build_task_form(
@@ -48,25 +94,17 @@ def build_task_form(
         spacing=8,
         controls=[
             # Title input
-            ft.TextField(
-                value=title,
-                hint_text="Task title...",
-                on_change=lambda e: on_title_change(e.control.value),
-                height=48,
-                max_length=200,
-                border=ft.InputBorder.OUTLINE,
-                border_color="#2D2D4A",
-                focused_border_color="#4A6FA5",
-                bgcolor="#1A1A2E",
-                text_style=ft.TextStyle(color="#E8E8F0", size=13),
-                hint_style=ft.TextStyle(color="#747496", size=13),
+            _field(
+                title,
+                "Task title...",
+                lambda e: on_title_change(e.control.value),
             ),
             # Advanced toggle
             ft.TextButton(
                 content="Advanced options" if not advanced_visible else "Hide options",
                 on_click=lambda _: on_toggle_advanced(),
                 style=ft.ButtonStyle(
-                    color="#9898B8",
+                    color=GRAY_2,
                 ),
             ),
             # Advanced fields
@@ -74,30 +112,16 @@ def build_task_form(
                 spacing=8,
                 visible=advanced_visible,
                 controls=[
-                    ft.TextField(
-                        value=str(estimated_minutes) if estimated_minutes else "",
-                        hint_text="Estimated minutes (optional)",
-                        on_change=lambda e: on_estimated_change(int(e.control.value) if e.control.value.isdigit() else 0),
-                        height=48,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
+                    _field(
+                        str(estimated_minutes) if estimated_minutes else "",
+                        "Estimated minutes (optional)",
+                        lambda e: on_estimated_change(int(e.control.value) if e.control.value.isdigit() else 0),
                         keyboard_type=ft.KeyboardType.NUMBER,
-                        text_style=ft.TextStyle(color="#E8E8F0", size=13),
-                        hint_style=ft.TextStyle(color="#747496", size=13),
                     ),
-                    ft.TextField(
-                        value=deadline,
-                        hint_text="Deadline — e.g. 17:00 or Before Lunch",
-                        on_change=lambda e: on_deadline_change(e.control.value),
-                        height=48,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        text_style=ft.TextStyle(color="#E8E8F0", size=13),
-                        hint_style=ft.TextStyle(color="#747496", size=13),
+                    _field(
+                        deadline,
+                        "Deadline — e.g. 17:00 or Before Lunch",
+                        lambda e: on_deadline_change(e.control.value),
                     ),
                     ft.Row(
                         spacing=4,
@@ -105,37 +129,31 @@ def build_task_form(
                             ft.Chip(
                                 label=ft.Text("Before Lunch", size=10),
                                 on_select=lambda _: on_deadline_change("Before Lunch"),
-                                bgcolor="#2D2D4A25",
-                                selected_color="#4A6FA5",
+                                bgcolor=PARCHMENT_CHIP,
+                                selected_color=PRIMARY,
                             ),
                             ft.Chip(
                                 label=ft.Text("Before Dinner", size=10),
                                 on_select=lambda _: on_deadline_change("Before Dinner"),
-                                bgcolor="#2D2D4A25",
-                                selected_color="#4A6FA5",
+                                bgcolor=PARCHMENT_CHIP,
+                                selected_color=PRIMARY,
                             ),
                             ft.Chip(
                                 label=ft.Text("End of Day", size=10),
                                 on_select=lambda _: on_deadline_change("End of Day"),
-                                bgcolor="#2D2D4A25",
-                                selected_color="#4A6FA5",
+                                bgcolor=PARCHMENT_CHIP,
+                                selected_color=PRIMARY,
                             ),
                         ],
                     ),
-                    ft.TextField(
-                        value=notes,
-                        hint_text="Notes (optional)",
-                        on_change=lambda e: on_notes_change(e.control.value),
-                        multiline=True,
+                    _field(
+                        notes,
+                        "Notes (optional)",
+                        lambda e: on_notes_change(e.control.value),
                         height=80,
+                        multiline=True,
                         min_lines=2,
                         max_lines=4,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        text_style=ft.TextStyle(color="#E8E8F0", size=13),
-                        hint_style=ft.TextStyle(color="#747496", size=13),
                     ),
                 ],
             ),
@@ -147,13 +165,14 @@ def build_task_form(
                     ft.TextButton(
                         content="Cancel",
                         on_click=lambda _: on_cancel(),
+                        style=ft.ButtonStyle(color=GRAY_3),
                     ),
                     ft.Button(
-                        content=ft.Text("Save" if is_edit_mode else "Create", color="white"),
+                        content=ft.Text("Save" if is_edit_mode else "Create", color=ON_PRIMARY),
                         on_click=lambda _: on_submit(),
-                        bgcolor="#4A6FA5",
+                        bgcolor=PRIMARY,
                         style=ft.ButtonStyle(
-                            shape=ft.RoundedRectangleBorder(radius=8),
+                            shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"]),
                         ),
                     ),
                 ],

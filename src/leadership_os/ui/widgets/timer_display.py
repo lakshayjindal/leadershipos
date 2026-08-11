@@ -2,13 +2,14 @@
 
 Shows elapsed time in large monospace font.
 Optionally displays a circular progress indicator when estimated duration is set.
+Apple-style light: ink text, Action Blue active state.
 """
 
 from __future__ import annotations
 
 import flet as ft
 
-from leadership_os.utils.time_utils import format_duration
+from leadership_os.ui.theme import GRAY_2, GRAY_5, PRIMARY
 
 
 def build_timer_display(
@@ -26,12 +27,12 @@ def build_timer_display(
     Returns:
         A Container representing the timer display.
     """
-    timer_color = "#4A6FA5" if is_running else "#9898B8"
+    timer_color = PRIMARY if is_running else GRAY_2
 
     content_controls = [
         ft.Container(
             height=80,
-            alignment=ft.Alignment(0,0),
+            alignment=ft.Alignment(0, 0),
             content=ft.Text(
                 time_text,
                 color=timer_color,
@@ -52,7 +53,7 @@ def build_timer_display(
         content_controls.append(
             ft.Container(
                 height=60,
-                alignment=ft.Alignment(0,0),
+                alignment=ft.Alignment(0, 0),
                 content=ft.Stack(
                     width=50,
                     height=50,
@@ -62,18 +63,18 @@ def build_timer_display(
                             width=50,
                             height=50,
                             border_radius=25,
-                            border=ft.Border.all(3, "#33335050"),
+                            border=ft.Border.all(3, GRAY_5),
                         ),
                         # ProgressRing overlay
                         ft.ProgressRing(
                             value=progress,
-                            color="#4A6FA5",
-                            bgcolor="#33335000",
+                            color=PRIMARY,
+                            bgcolor="#e0e0e000",
                             width=50,
                             height=50,
                         ),
                     ],
-                    alignment=ft.Alignment(0,0),
+                    alignment=ft.Alignment(0, 0),
                 ),
             ),
         )

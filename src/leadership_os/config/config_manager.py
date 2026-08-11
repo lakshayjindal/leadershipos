@@ -13,6 +13,7 @@ Design principle: Configuration should influence behavior, not implementation.
 from __future__ import annotations
 
 import logging
+
 try:
     import tomllib
 except ModuleNotFoundError:

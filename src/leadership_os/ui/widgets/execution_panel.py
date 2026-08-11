@@ -2,14 +2,28 @@
 
 The heart of Leadership OS. Shows current task, focus timer, session info,
 daily progress, next task, and action buttons.
+
+Apple-style light design: white utility cards on parchment canvas with
+hairline borders, Action Blue pill primary buttons.
 """
 
 from __future__ import annotations
 
 import flet as ft
 
-from leadership_os.ui.theme import Theme
-from leadership_os.utils.time_utils import format_duration_short
+from leadership_os.ui.theme import (
+    GRAY_2,
+    GRAY_3,
+    GRAY_4,
+    GRAY_5,
+    HAIRLINE,
+    INK,
+    ON_PRIMARY,
+    PARCHMENT,
+    PEARL,
+    PRIMARY,
+    Theme,
+)
 
 # ─── Card helper ────────────────────────────────────────────────────
 
@@ -19,12 +33,12 @@ def _card(
     height: int | None = None,
     padding: int = 14,
 ) -> ft.Container:
-    """Wrap content in a consistent card container."""
+    """Wrap content in a consistent white utility card."""
     return ft.Container(
         height=height,
-        bgcolor="#181830",
-        border_radius=10,
-        border=ft.Border.all(1, "#2D2D4A15"),
+        bgcolor=PEARL,
+        border_radius=Theme.radius["lg"],
+        border=ft.Border.all(1, HAIRLINE),
         padding=padding,
         content=content,
     )
@@ -37,8 +51,8 @@ def _stat_box(value: str, label: str, color: str, border_color: str) -> ft.Conta
     """Build a compact stat display."""
     return ft.Container(
         expand=True,
-        bgcolor="#15152B",
-        border_radius=6,
+        bgcolor=PARCHMENT,
+        border_radius=Theme.radius["sm"],
         border=ft.Border.all(1, border_color),
         padding=ft.Padding(0, 6, 0, 2),
         content=ft.Column(
@@ -88,22 +102,22 @@ def build_execution_panel(
     on_break = panel_state == "break"
 
     # Timer color
-    timer_color = "#66A66B" if timer_running else "#9898B8"
+    timer_color = Theme.color("success") if timer_running else GRAY_2
 
     # State label
     if timer_running:
         state_label = "FOCUSING"
-        state_color = "#66A66B"
+        state_color = Theme.color("success")
     elif on_break:
         state_label = "ON BREAK"
-        state_color = "#C45B5B"
+        state_color = Theme.color("error")
     else:
         state_label = "IDLE"
-        state_color = "#747496"
+        state_color = GRAY_3
 
     return ft.Container(
         width=panel_width,
-        bgcolor="#14142A",
+        bgcolor=PARCHMENT,
         padding=12,
         content=ft.Column(
             spacing=8,
@@ -113,16 +127,16 @@ def build_execution_panel(
                     height=56 if has_task else 0,
                     opacity=1 if has_task else 0,
                     visible=has_task,
-                    bgcolor="#181830",
-                    border_radius=10,
-                    border=ft.Border.all(1, "#2D2D4A15"),
+                    bgcolor=PEARL,
+                    border_radius=Theme.radius["lg"],
+                    border=ft.Border.all(1, HAIRLINE),
                     padding=ft.Padding(14, 10, 14, 10),
                     content=ft.Column(
                         spacing=4,
                         controls=[
-                            ft.Text("CURRENT TASK", color="#747496", size=8, weight=ft.FontWeight.W_700),
-                            ft.Text(current_task_title, color="#E8E8F0", size=15, weight=ft.FontWeight.W_700),
-                            ft.Text(current_task_priority, color="#9898B8", size=10),
+                            ft.Text("CURRENT TASK", color=GRAY_3, size=8, weight=ft.FontWeight.W_700),
+                            ft.Text(current_task_title, color=INK, size=15, weight=ft.FontWeight.W_700),
+                            ft.Text(current_task_priority, color=GRAY_2, size=10),
                         ],
                     ),
                 ),
@@ -132,15 +146,15 @@ def build_execution_panel(
                     height=56 if not has_task else 0,
                     opacity=1 if not has_task else 0,
                     visible=not has_task,
-                    bgcolor="#181830",
-                    border_radius=10,
-                    border=ft.Border.all(1, "#2D2D4A15"),
+                    bgcolor=PEARL,
+                    border_radius=Theme.radius["lg"],
+                    border=ft.Border.all(1, HAIRLINE),
                     padding=ft.Padding(14, 14, 14, 14),
                     content=ft.Column(
                         spacing=2,
                         controls=[
-                            ft.Text("No active task", color="#747496", size=13),
-                            ft.Text("Start one from Today's Plan", color="#5A5A80", size=10),
+                            ft.Text("No active task", color=GRAY_3, size=13),
+                            ft.Text("Start one from Today's Plan", color=GRAY_4, size=10),
                         ],
                     ),
                 ),
@@ -156,7 +170,7 @@ def build_execution_panel(
                             # Large timer
                             ft.Container(
                                 height=72,
-                                alignment=ft.Alignment(0,0),
+                                alignment=ft.Alignment(0, 0),
                                 content=ft.Text(
                                     timer_display,
                                     color=timer_color,
@@ -177,7 +191,7 @@ def build_execution_panel(
                                 f"{break_type_label}  ·  {break_elapsed}" if on_break and break_type_label else (
                                     f"Elapsed {session_elapsed}  ·  Remain {session_estimated}"
                                 ),
-                                color="#C45B5B" if on_break else "#5A5A80",
+                                color=Theme.color("error") if on_break else GRAY_3,
                                 size=9,
                             ),
                         ],
@@ -194,8 +208,8 @@ def build_execution_panel(
                             # Header row
                             ft.Row(
                                 controls=[
-                                    ft.Text("TODAY'S PROGRESS", color="#747496", size=8, weight=ft.FontWeight.W_700),
-                                    ft.Text(progress_status, color="#9898B8", size=10),
+                                    ft.Text("TODAY'S PROGRESS", color=GRAY_3, size=8, weight=ft.FontWeight.W_700),
+                                    ft.Text(progress_status, color=GRAY_2, size=10),
                                 ],
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             ),
@@ -203,11 +217,11 @@ def build_execution_panel(
                             ft.Container(
                                 height=4,
                                 border_radius=2,
-                                bgcolor="#2D2D4A35",
+                                bgcolor=GRAY_5,
                                 content=ft.Container(
                                     height=4,
                                     border_radius=2,
-                                    bgcolor="#66A66B" if total_count > 0 and completed_count >= total_count else "#4A6FA5",
+                                    bgcolor=Theme.color("success") if total_count > 0 and completed_count >= total_count else PRIMARY,
                                     width=max(4, panel_width * 0.75 * min(1.0, completed_count / max(1, total_count))),
                                 ),
                             ),
@@ -215,9 +229,9 @@ def build_execution_panel(
                             ft.Row(
                                 spacing=6,
                                 controls=[
-                                    _stat_box(str(int(completed_count)), "Done", "#66A66B", "#66A66B20"),
-                                    _stat_box(str(int(max(0, total_count - completed_count))), "Left", "#4A6FA5", "#4A6FA520"),
-                                    _stat_box(focus_time_display, "Focus", "#9898B8", "#9898B818"),
+                                    _stat_box(str(int(completed_count)), "Done", Theme.color("success"), "#34c75940"),
+                                    _stat_box(str(int(max(0, total_count - completed_count))), "Left", PRIMARY, "#0066cc40"),
+                                    _stat_box(focus_time_display, "Focus", GRAY_2, "#6e6e7340"),
                                 ],
                             ),
                         ],
@@ -231,10 +245,10 @@ def build_execution_panel(
                     content=ft.Column(
                         spacing=2,
                         controls=[
-                            ft.Text("NEXT UP", color="#747496", size=8, weight=ft.FontWeight.W_700),
+                            ft.Text("NEXT UP", color=GRAY_3, size=8, weight=ft.FontWeight.W_700),
                             ft.Text(
                                 next_task_title if next_task_title else "—",
-                                color="#9898B8" if next_task_title else "#4A4A70",
+                                color=GRAY_2 if next_task_title else GRAY_5,
                                 size=13,
                                 italic=not next_task_title,
                             ),
@@ -252,18 +266,18 @@ def build_execution_panel(
                     content=ft.Column(
                         spacing=4,
                         controls=[
-                            ft.Text("ACTIONS", color="#747496", size=8, weight=ft.FontWeight.W_700),
+                            ft.Text("ACTIONS", color=GRAY_3, size=8, weight=ft.FontWeight.W_700),
                             ft.Container(height=2),
 
-                            # Complete — PRIMARY
+                            # Complete — PRIMARY (blue pill)
                             ft.Button(
-                                content=ft.Text("✓  Complete Task", color="white"),
+                                content=ft.Text("✓  Complete Task", color=ON_PRIMARY),
                                 disabled=not has_task,
                                 on_click=lambda _: on_complete(),
                                 height=40,
-                                bgcolor="#4A6FA5" if has_task else "#4A6FA540",
+                                bgcolor=PRIMARY if has_task else "#0066cc40",
                                 style=ft.ButtonStyle(
-                                    shape=ft.RoundedRectangleBorder(radius=8),
+                                    shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"]),
                                 ),
                             ),
 
@@ -274,9 +288,9 @@ def build_execution_panel(
                                 on_click=lambda _: on_pause(),
                                 height=34,
                                 style=ft.ButtonStyle(
-                                    color="#9898B8" if has_task else "#9898B840",
-                                    bgcolor="#2D2D4A25" if has_task else "#2D2D4A15",
-                                    shape=ft.RoundedRectangleBorder(radius=6),
+                                    color=GRAY_2 if has_task else "#6e6e7340",
+                                    bgcolor=PARCHMENT if has_task else "#f5f5f720",
+                                    shape=ft.RoundedRectangleBorder(radius=Theme.radius["sm"]),
                                 ),
                             ),
 
@@ -288,24 +302,24 @@ def build_execution_panel(
                                 on_click=lambda _: on_start_break(),
                                 height=30,
                                 style=ft.ButtonStyle(
-                                    color="#9898B8B0" if has_task else "#9898B840",
-                                    bgcolor="#2D2D4A1A" if has_task else "#2D2D4A0D",
-                                    shape=ft.RoundedRectangleBorder(radius=6),
+                                    color="#0066cc" if has_task else "#0066cc40",
+                                    bgcolor="#0066cc14" if has_task else "#0066cc0a",
+                                    shape=ft.RoundedRectangleBorder(radius=Theme.radius["sm"]),
                                 ),
                             ),
 
                             # Separator — only between the two button groups
-                            ft.Divider(height=1, color="#2D2D4A0D", visible=on_break),
+                            ft.Divider(height=1, color="#f0f0f0", visible=on_break),
 
                             # Resume — BREAK PRIMARY (only while on break)
                             ft.Button(
-                                content=ft.Text("▶  Resume Work", color="white"),
+                                content=ft.Text("▶  Resume Work", color=ON_PRIMARY),
                                 visible=on_break,
                                 on_click=lambda _: on_resume(),
                                 height=40,
-                                bgcolor="#66A66B",
+                                bgcolor=Theme.color("success"),
                                 style=ft.ButtonStyle(
-                                    shape=ft.RoundedRectangleBorder(radius=8),
+                                    shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"]),
                                 ),
                             ),
 
@@ -316,9 +330,9 @@ def build_execution_panel(
                                 on_click=lambda _: on_end_break(),
                                 height=30,
                                 style=ft.ButtonStyle(
-                                    color="#9898B8B0",
-                                    bgcolor="#2D2D4A1A",
-                                    shape=ft.RoundedRectangleBorder(radius=6),
+                                    color=Theme.color("error"),
+                                    bgcolor="#ff3b3014",
+                                    shape=ft.RoundedRectangleBorder(radius=Theme.radius["sm"]),
                                 ),
                             ),
                         ],

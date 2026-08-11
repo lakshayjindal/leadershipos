@@ -9,11 +9,22 @@ Uses Flet Chips with visual selection feedback.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import flet as ft
 
 from leadership_os.core.enums import BreakType
+from leadership_os.ui.theme import (
+    GRAY_2,
+    GRAY_3,
+    GRAY_4,
+    HAIRLINE,
+    INK,
+    ON_PRIMARY,
+    PARCHMENT,
+    PRIMARY,
+    Theme,
+)
 
 # Human-readable labels and icons for each break type
 BREAK_OPTIONS: list[dict[str, str]] = [
@@ -61,25 +72,25 @@ def build_break_dialog(
             new_chips.append(
                 ft.Container(
                     on_click=lambda _, o=opt: _select_type(o["value"]),
-                    bgcolor="#2D2D4A35" if not is_sel else "#4A6FA530",
+                    bgcolor=PARCHMENT if not is_sel else "#0066cc14",
                     border=ft.Border.all(
                         1.5,
-                        "#2D2D4A" if not is_sel else "#4A6FA5",
+                        HAIRLINE if not is_sel else PRIMARY,
                     ),
-                    border_radius=8,
+                    border_radius=Theme.radius["md"],
                     padding=ft.Padding(12, 10, 12, 10),
                     content=ft.Row(
                         spacing=8,
                         controls=[
                             ft.Icon(
                                 opt["icon"], size=16,
-                                color="#4A6FA5" if is_sel else "#9898B8",
+                                color=PRIMARY if is_sel else GRAY_3,
                             ),
                             ft.Text(
                                 opt["label"],
-                                color="#E8E8F0" if is_sel else "#9898B8",
+                                color=INK if is_sel else GRAY_2,
                                 size=13,
-                                weight=ft.FontWeight.W_500 if is_sel else ft.FontWeight.W_400,
+                                weight=ft.FontWeight.W_600 if is_sel else ft.FontWeight.W_400,
                             ),
                         ],
                     ),
@@ -100,25 +111,25 @@ def build_break_dialog(
         initial_chips.append(
             ft.Container(
                 on_click=lambda _, o=opt: _select_type(o["value"]),
-                bgcolor="#2D2D4A35" if not is_sel else "#4A6FA530",
+                bgcolor=PARCHMENT if not is_sel else "#0066cc14",
                 border=ft.Border.all(
                     1.5,
-                    "#2D2D4A" if not is_sel else "#4A6FA5",
+                    HAIRLINE if not is_sel else PRIMARY,
                 ),
-                border_radius=8,
+                border_radius=Theme.radius["md"],
                 padding=ft.Padding(12, 10, 12, 10),
                 content=ft.Row(
                     spacing=8,
                     controls=[
                         ft.Icon(
                             opt["icon"], size=16,
-                            color="#4A6FA5" if is_sel else "#9898B8",
+                            color=PRIMARY if is_sel else GRAY_3,
                         ),
                         ft.Text(
                             opt["label"],
-                            color="#E8E8F0" if is_sel else "#9898B8",
+                            color=INK if is_sel else GRAY_2,
                             size=13,
-                            weight=ft.FontWeight.W_500 if is_sel else ft.FontWeight.W_400,
+                            weight=ft.FontWeight.W_600 if is_sel else ft.FontWeight.W_400,
                         ),
                     ],
                 ),
@@ -127,7 +138,7 @@ def build_break_dialog(
 
     return ft.Container(
         expand=True,
-        bgcolor="#0D0D1A",
+        bgcolor=PARCHMENT,
         padding=ft.Padding(24, 16, 24, 12),
         content=ft.Column(
             spacing=0,
@@ -136,21 +147,21 @@ def build_break_dialog(
                 ft.Row(
                     spacing=0,
                     controls=[
-                        ft.Icon(ft.Icons.COFFEE, size=20, color="#C4A35A"),
+                        ft.Icon(ft.Icons.COFFEE, size=20, color=Theme.color("warning")),
                         ft.Container(width=8),
-                        ft.Text("Start Break", color="#E8E8F0", size=18, weight=ft.FontWeight.W_700),
+                        ft.Text("Start Break", color=INK, size=18, weight=ft.FontWeight.W_700),
                     ],
                 ),
                 ft.Container(height=4),
                 ft.Text(
                     "Taking breaks helps maintain focus. Choose a break type below.",
-                    color="#9898B8",
+                    color=GRAY_2,
                     size=12,
                     height=1.4,
                 ),
                 ft.Container(height=20),
                 # Break type label
-                ft.Text("Break Type", color="#747496", size=10, weight=ft.FontWeight.W_700),
+                ft.Text("Break Type", color=GRAY_3, size=10, weight=ft.FontWeight.W_700),
                 ft.Container(height=8),
                 # Type chips with visual selection
                 ft.Column(
@@ -178,11 +189,11 @@ def build_break_dialog(
                     min_lines=1,
                     max_lines=3,
                     border=ft.InputBorder.OUTLINE,
-                    border_color="#2D2D4A",
-                    focused_border_color="#4A6FA5",
-                    bgcolor="#1A1A2E",
-                    text_style=ft.TextStyle(color="#E8E8F0", size=13),
-                    hint_style=ft.TextStyle(color="#747496", size=13),
+                    border_color=HAIRLINE,
+                    focused_border_color=PRIMARY,
+                    bgcolor="#ffffff",
+                    text_style=ft.TextStyle(color=INK, size=13),
+                    hint_style=ft.TextStyle(color=GRAY_4, size=13),
                 ),
                 ft.Container(height=16),
                 # Action buttons
@@ -192,14 +203,14 @@ def build_break_dialog(
                         ft.TextButton(
                             content="Cancel",
                             on_click=lambda _: on_cancel(),
-                            style=ft.ButtonStyle(color="#9898B8"),
+                            style=ft.ButtonStyle(color=GRAY_3),
                         ),
                         ft.Button(
-                            content=ft.Text("Start Break", color="white"),
+                            content=ft.Text("Start Break", color=ON_PRIMARY),
                             on_click=_handle_confirm,
                             height=40,
-                            bgcolor="#C4A35A",
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                            bgcolor=PRIMARY,
+                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"])),
                         ),
                     ],
                     alignment=ft.MainAxisAlignment.END,

@@ -229,7 +229,7 @@ class TestTaskCardSelection:
 
         assert card is not None
         # Selected cards have a different bgcolor
-        assert card.bgcolor == "#1A1A30"
+        assert card.bgcolor == "#fafafc"
 
     def test_not_selected_has_default_bg(self):
         """Unselected cards should use default background."""
@@ -246,4 +246,4 @@ class TestTaskCardSelection:
         )
 
         assert card is not None
-        assert card.bgcolor == "#15152B"
+        assert card.bgcolor == "#ffffff"

@@ -92,7 +92,7 @@ class TestSettingsScreenSnackBar:
 
         # Verify the snack bar content
         assert isinstance(fake_page.snack_bar, ft.SnackBar)
-        assert fake_page.snack_bar.bgcolor == "#66A66B"
+        assert fake_page.snack_bar.bgcolor == "#34c759"
 
     def test_all_settings_tabs_render(self):
         """Every settings tab should render without errors."""
@@ -127,7 +127,7 @@ class TestAppSnackBarPattern:
         # This is the exact pattern used in app.py _handle_review_finalize
         fake_page.snack_bar = ft.SnackBar(
             content=ft.Text("Test message", color="white", size=13),
-            bgcolor="#C45B5B",
+            bgcolor="#ff3b30",
             duration=3000,
         )
         fake_page.snack_bar.open = True
@@ -142,7 +142,7 @@ class TestAppSnackBarPattern:
         # This should not raise
         bar = ft.SnackBar(
             content=ft.Text("Hello", color="white", size=13),
-            bgcolor="#66A66B",
+            bgcolor="#34c759",
             duration=2000,
         )
         assert bar is not None
@@ -258,7 +258,7 @@ class TestTaskCardSelection:
             is_selected=True,
         )
         assert card is not None
-        assert card.bgcolor == "#1A1A30"
+        assert card.bgcolor == "#fafafc"
 
     def test_unselected_card_renders(self):
         """Should render with is_selected=False."""
@@ -274,7 +274,7 @@ class TestTaskCardSelection:
             is_selected=False,
         )
         assert card is not None
-        assert card.bgcolor == "#15152B"
+        assert card.bgcolor == "#ffffff"
 
 
 # ─── Test: All widget modules import cleanly ─────────────────────────

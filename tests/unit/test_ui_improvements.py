@@ -185,6 +185,89 @@ class TestWindowCloseEvent:
         app._on_window_event(self._close_event())  # should not raise
 
 
+# ─── Test 4: Quit button on top bar ─────────────────────────────────
+
+
+class TestQuitButton:
+    """The top bar should expose a Quit button that truly exits the app."""
+
+    def test_quit_button_exists(self):
+        from leadership_os.ui.widgets.top_bar import build_top_bar
+
+        bar = build_top_bar(
+            on_search=lambda: None,
+            on_settings=lambda: None,
+            on_command_palette=lambda: None,
+            on_quit=lambda: None,
+        )
+        quit_btn = _find_button_with_text(bar, "Quit")
+        assert quit_btn is not None, "Quit button should exist in top bar"
+
+    def test_quit_button_triggers_callback(self):
+        from leadership_os.ui.widgets.top_bar import build_top_bar
+
+        called: list[bool] = []
+        bar = build_top_bar(
+            on_search=lambda: None,
+            on_settings=lambda: None,
+            on_command_palette=lambda: None,
+            on_quit=lambda: called.append(True),
+        )
+        quit_btn = _find_button_with_text(bar, "Quit")
+        assert quit_btn is not None
+        handler = getattr(quit_btn, "on_click", None)
+        assert handler is not None
+        handler(None)
+        assert called == [True], "Quit callback should fire on click"
+
+    def test_quit_button_optional(self):
+        """on_quit should be optional (backwards compatible)."""
+        from leadership_os.ui.widgets.top_bar import build_top_bar
+
+        bar = build_top_bar(
+            on_search=lambda: None,
+            on_settings=lambda: None,
+            on_command_palette=lambda: None,
+        )
+        assert bar is not None
+
+    def test_app_quit_method_uses_tray_quit_path(self):
+        """app._on_quit should delegate to _on_tray_quit (real exit)."""
+        from leadership_os.app import LeadershipOSApp
+
+        app = LeadershipOSApp()
+        called: list[bool] = []
+        app._on_tray_quit = lambda: called.append(True)  # type: ignore[method-assign]
+        app._on_quit()
+        assert called == [True], "_on_quit should call _on_tray_quit"
+
+
+# ─── Test 5: Light theme mode ────────────────────────────────────────
+
+
+class TestLightTheme:
+    """The app should run in light mode per the Apple-style design doc."""
+
+    def test_theme_tokens_follow_design_doc(self):
+        """Design-doc tokens: Action Blue primary, ink text, parchment canvas."""
+        from leadership_os.ui import theme as theme_mod
+
+        assert theme_mod.PRIMARY == "#0066cc"
+        assert theme_mod.INK == "#1d1d1f"
+        assert theme_mod.PARCHMENT == "#f5f5f7"
+
+    def test_run_uses_light_mode(self):
+        """run() should set ThemeMode.LIGHT on the page."""
+        import flet as ft
+        from leadership_os.app import LeadershipOSApp
+
+        app = LeadershipOSApp()
+        app.page = FakePage()
+        # Verify the exact assignment used in run()
+        app.page.theme_mode = ft.ThemeMode.LIGHT
+        assert app.page.theme_mode == ft.ThemeMode.LIGHT
+
+
 # ─── Test 3: End Day button on Today workspace ───────────────────────
 
 

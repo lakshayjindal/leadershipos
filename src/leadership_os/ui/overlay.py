@@ -22,8 +22,8 @@ from __future__ import annotations
 import logging
 import queue
 import threading
-from pathlib import Path
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -43,15 +43,17 @@ OVERLAY_ROW_HEIGHT = 22  # Height of each pending-task row
 OVERLAY_MAX_PENDING = 4  # Max pending tasks shown on the overlay
 DEFAULT_OPACITY = 0.85
 
-# Dark theme colors
-BG_COLOR = "#14142A"
-TEXT_PRIMARY = "#E8E8F0"
-TEXT_SECONDARY = "#9898B8"
-TEXT_MUTED = "#747496"
-ACCENT_BLUE = "#4A6FA5"
-ACCENT_GREEN = "#66A66B"
-ACCENT_RED = "#C45B5B"
-ACCENT_AMBER = "#C4A35A"
+# Apple design-doc dark-tile palette (near-black tile surfaces)
+BG_COLOR = "#272729"            # surface-tile-1
+BG_HOVER = "#2a2a2c"            # surface-tile-2
+MENU_BG = "#252527"             # surface-tile-3
+TEXT_PRIMARY = "#ffffff"         # body-on-dark
+TEXT_SECONDARY = "#cccccc"       # body-muted
+TEXT_MUTED = "#86868b"
+ACCENT_BLUE = "#2997ff"         # primary-on-dark (Sky Link Blue)
+ACCENT_GREEN = "#34c759"
+ACCENT_RED = "#ff3b30"
+ACCENT_AMBER = "#ff9500"
 
 
 class OverlayWindow:
@@ -274,10 +276,7 @@ class OverlayWindow:
             return
         self._root.update_idletasks()
         screen_width = self._root.winfo_screenwidth()
-        if self._pos_x < 0:
-            x = screen_width - OVERLAY_WIDTH - 20
-        else:
-            x = self._pos_x
+        x = screen_width - OVERLAY_WIDTH - 20 if self._pos_x < 0 else self._pos_x
         self._root.geometry(f"+{x}+{self._pos_y}")
 
     def _poll_updates(self) -> None:
@@ -382,7 +381,7 @@ class OverlayWindow:
             self._callbacks["select_task"](task_id)
 
         def _on_enter(_event=None):
-            row.configure(bg="#1E1E3A", fg=TEXT_PRIMARY)
+            row.configure(bg=BG_HOVER, fg=TEXT_PRIMARY)
 
         def _on_leave(_event=None):
             row.configure(bg=BG_COLOR, fg=TEXT_SECONDARY)
@@ -410,8 +409,8 @@ class OverlayWindow:
 
     def _on_right_click(self, event) -> None:
         """Show right-click context menu."""
-        menu = tk.Menu(self._root, tearoff=0, bg="#1A1A2E", fg=TEXT_PRIMARY,
-                       activebackground="#2D2D4A", activeforeground=TEXT_PRIMARY,
+        menu = tk.Menu(self._root, tearoff=0, bg=MENU_BG, fg=TEXT_PRIMARY,
+                       activebackground=BG_HOVER, activeforeground=TEXT_PRIMARY,
                        font=("Inter", 10))
         menu.add_command(label="Pause Task", command=self._callbacks["pause"])
         menu.add_command(label="Complete Task", command=self._callbacks["complete"])

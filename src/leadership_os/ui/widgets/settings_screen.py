@@ -12,12 +12,23 @@ import flet as ft
 
 from leadership_os.config.config_manager import ConfigManager
 from leadership_os.core.event_bus import CONFIG_CHANGED, EventBus
+from leadership_os.ui.theme import (
+    GRAY_2,
+    GRAY_3,
+    GRAY_4,
+    HAIRLINE,
+    INK,
+    ON_PRIMARY,
+    PARCHMENT,
+    PRIMARY,
+    Theme,
+)
 
 # ─── Helpers ──────────────────────────────────────────────────────────
 
 
 def _section_label(text: str) -> ft.Text:
-    return ft.Text(text, color="#747496", size=10, weight=ft.FontWeight.W_700)
+    return ft.Text(text, color=GRAY_3, size=10, weight=ft.FontWeight.W_700)
 
 
 def _setting_row(
@@ -29,7 +40,7 @@ def _setting_row(
     controls: list[ft.Control] = [
         ft.Row(
             controls=[
-                ft.Text(label, color="#E8E8F0", size=13),
+                ft.Text(label, color=INK, size=13),
                 ft.Container(expand=True),
                 control,
             ],
@@ -38,20 +49,20 @@ def _setting_row(
     ]
     if description:
         controls.append(
-            ft.Text(description, color="#5A5A80", size=10)
+            ft.Text(description, color=GRAY_4, size=10)
         )
     return ft.Column(spacing=2, controls=controls)
 
 
 def _divider() -> ft.Divider:
-    return ft.Divider(height=1, color="#2D2D4A25")
+    return ft.Divider(height=1, color=HAIRLINE)
 
 
 def _save_button(on_click) -> ft.Button:
     return ft.Button(
-        content=ft.Text("Save Settings", size=13, color="white"),
-        bgcolor="#4A6FA5",
-        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+        content=ft.Text("Save Settings", size=13, color=ON_PRIMARY),
+        bgcolor=PRIMARY,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"])),
         on_click=on_click,
     )
 
@@ -159,7 +170,7 @@ def build_settings_screen(
         if e.page:
             e.page.snack_bar = ft.SnackBar(
                 content=ft.Text("Settings saved", color="white", size=13),
-                bgcolor="#66A66B",
+                bgcolor=Theme.color("success"),
                 duration=2000,
             )
             e.page.snack_bar.open = True
@@ -174,79 +185,48 @@ def build_settings_screen(
 
     # ── Tab 1: Work Schedule ──────────────────────────────────────
 
+    def _input_field(ref, value: str, width: int, hint: str = "") -> ft.TextField:
+        """Build a light-styled input field used across settings tabs."""
+        return ft.TextField(
+            ref=ref,
+            value=value,
+            width=width,
+            height=36,
+            text_size=13,
+            border=ft.InputBorder.OUTLINE,
+            border_color=HAIRLINE,
+            focused_border_color=PRIMARY,
+            bgcolor="#ffffff",
+            color=INK,
+            dense=True,
+            hint_text=hint,
+        )
+
     work_schedule_tab = ft.Container(
         padding=20,
         content=ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Work Schedule", color="#E8E8F0", size=16, weight=ft.FontWeight.W_700),
+                ft.Text("Work Schedule", color=INK, size=16, weight=ft.FontWeight.W_700),
                 _divider(),
                 _setting_row(
                     "Start Time",
-                    ft.TextField(
-                        ref=start_time,
-                        value=work.get("start_time", "09:00"),
-                        width=80,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(start_time, work.get("start_time", "09:00"), 80),
                     "When your workday typically begins",
                 ),
                 _setting_row(
                     "End Time",
-                    ft.TextField(
-                        ref=end_time,
-                        value=work.get("end_time", "18:00"),
-                        width=80,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(end_time, work.get("end_time", "18:00"), 80),
                     "When your workday typically ends",
                 ),
                 _setting_row(
                     "Lunch Time",
-                    ft.TextField(
-                        ref=lunch_time,
-                        value=work.get("lunch_time", "13:00"),
-                        width=80,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(lunch_time, work.get("lunch_time", "13:00"), 80),
                     "Your usual lunch break time",
                 ),
                 _setting_row(
                     "Dinner Time",
-                    ft.TextField(
-                        ref=dinner_time,
-                        value=work.get("dinner_time", "19:00"),
-                        width=80,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(dinner_time, work.get("dinner_time", "19:00"), 80),
                     "Your usual dinner time",
                 ),
             ],
@@ -260,13 +240,13 @@ def build_settings_screen(
         content=ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Interface", color="#E8E8F0", size=16, weight=ft.FontWeight.W_700),
+                ft.Text("Interface", color=INK, size=16, weight=ft.FontWeight.W_700),
                 _divider(),
                 _setting_row(
                     "Theme",
                     ft.Dropdown(
                         ref=theme_dropdown,
-                        value=ui.get("theme", "dark"),
+                        value=ui.get("theme", "light"),
                         width=120,
                         height=36,
                         options=[
@@ -274,10 +254,10 @@ def build_settings_screen(
                             ft.dropdown.Option("light", "Light"),
                             ft.dropdown.Option("system", "System"),
                         ],
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
+                        border_color=HAIRLINE,
+                        focused_border_color=PRIMARY,
+                        bgcolor="#ffffff",
+                        color=INK,
                         text_size=13,
                         dense=True,
                     ),
@@ -292,7 +272,7 @@ def build_settings_screen(
                         max=1.0,
                         divisions=9,
                         width=160,
-                        active_color="#4A6FA5",
+                        active_color=PRIMARY,
                     ),
                     "Transparency of the floating overlay window",
                 ),
@@ -301,7 +281,7 @@ def build_settings_screen(
                     ft.Switch(
                         ref=show_overlay,
                         value=bool(ui.get("show_overlay", True)),
-                        active_color="#4A6FA5",
+                        active_color=PRIMARY,
                     ),
                     "Show floating overlay window during work",
                 ),
@@ -316,40 +296,16 @@ def build_settings_screen(
         content=ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Journaling", color="#E8E8F0", size=16, weight=ft.FontWeight.W_700),
+                ft.Text("Journaling", color=INK, size=16, weight=ft.FontWeight.W_700),
                 _divider(),
                 _setting_row(
                     "Obsidian Vault Path",
-                    ft.TextField(
-                        ref=vault_path,
-                        value=journaling.get("vault_path", "~/Documents/Obsidian"),
-                        width=280,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(vault_path, journaling.get("vault_path", "~/Documents/Obsidian"), 280),
                     "Root path of your Obsidian vault",
                 ),
                 _setting_row(
                     "Journal Directory",
-                    ft.TextField(
-                        ref=journal_dir,
-                        value=journaling.get("journal_dir", "Daily Notes"),
-                        width=200,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(journal_dir, journaling.get("journal_dir", "Daily Notes"), 200),
                     "Subdirectory for daily journal files",
                 ),
             ],
@@ -363,119 +319,35 @@ def build_settings_screen(
         content=ft.Column(
             spacing=10,
             controls=[
-                ft.Text("Keyboard Shortcuts", color="#E8E8F0", size=16, weight=ft.FontWeight.W_700),
+                ft.Text("Keyboard Shortcuts", color=INK, size=16, weight=ft.FontWeight.W_700),
                 _divider(),
                 _setting_row(
                     "Create Task",
-                    ft.TextField(
-                        ref=kb_create,
-                        value=keyboard.get("create_task", "ctrl+n"),
-                        width=140,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(kb_create, keyboard.get("create_task", "ctrl+n"), 140),
                 ),
                 _setting_row(
                     "Complete Task",
-                    ft.TextField(
-                        ref=kb_complete,
-                        value=keyboard.get("complete_task", "ctrl+enter"),
-                        width=140,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(kb_complete, keyboard.get("complete_task", "ctrl+enter"), 140),
                 ),
                 _setting_row(
                     "Pause/Resume Task",
-                    ft.TextField(
-                        ref=kb_pause,
-                        value=keyboard.get("pause_task", "ctrl+space"),
-                        width=140,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(kb_pause, keyboard.get("pause_task", "ctrl+space"), 140),
                 ),
                 _setting_row(
                     "Start Break",
-                    ft.TextField(
-                        ref=kb_break,
-                        value=keyboard.get("start_break", "ctrl+b"),
-                        width=140,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(kb_break, keyboard.get("start_break", "ctrl+b"), 140),
                 ),
                 _setting_row(
                     "End Break",
-                    ft.TextField(
-                        ref=kb_end_break,
-                        value=keyboard.get("end_break", "ctrl+shift+b"),
-                        width=140,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(kb_end_break, keyboard.get("end_break", "ctrl+shift+b"), 140),
                 ),
                 _setting_row(
                     "End-of-Day Review",
-                    ft.TextField(
-                        ref=kb_review,
-                        value=keyboard.get("end_day", "ctrl+e"),
-                        width=140,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(kb_review, keyboard.get("end_day", "ctrl+e"), 140),
                 ),
                 _setting_row(
                     "Command Palette",
-                    ft.TextField(
-                        ref=kb_cmd_palette,
-                        value=keyboard.get("command_palette", "ctrl+k"),
-                        width=140,
-                        height=36,
-                        text_size=13,
-                        border=ft.InputBorder.OUTLINE,
-                        border_color="#2D2D4A",
-                        focused_border_color="#4A6FA5",
-                        bgcolor="#1A1A2E",
-                        color="#E8E8F0",
-                        dense=True,
-                    ),
+                    _input_field(kb_cmd_palette, keyboard.get("command_palette", "ctrl+k"), 140),
                 ),
             ],
         ),
@@ -488,14 +360,14 @@ def build_settings_screen(
         content=ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Startup Behavior", color="#E8E8F0", size=16, weight=ft.FontWeight.W_700),
+                ft.Text("Startup Behavior", color=INK, size=16, weight=ft.FontWeight.W_700),
                 _divider(),
                 _setting_row(
                     "Minimize to System Tray",
                     ft.Switch(
                         ref=minimize_to_tray,
                         value=bool(startup.get("minimize_to_tray", True)),
-                        active_color="#4A6FA5",
+                        active_color=PRIMARY,
                     ),
                     "Minimize to tray instead of closing when window is closed",
                 ),
@@ -504,7 +376,7 @@ def build_settings_screen(
                     ft.Switch(
                         ref=restore_session,
                         value=bool(startup.get("restore_previous_session", True)),
-                        active_color="#4A6FA5",
+                        active_color=PRIMARY,
                     ),
                     "Automatically restore your previous session on startup",
                 ),
@@ -536,7 +408,7 @@ def build_settings_screen(
     def _select_tab(index: int):
         for i, ref in enumerate(tab_button_refs):
             if ref.current:
-                ref.current.bgcolor = "#2D2D4A60" if i == index else "transparent"
+                ref.current.bgcolor = PARCHMENT if i == index else "transparent"
         active_tab_content.content = tab_views[index]
         active_tab_content.update()
 
@@ -544,14 +416,14 @@ def build_settings_screen(
         return ft.Container(
             ref=tab_button_refs[index],
             padding=ft.Padding(10, 6, 10, 6),
-            border_radius=6,
-            bgcolor="#2D2D4A60" if index == 0 else "transparent",
+            border_radius=Theme.radius["sm"],
+            bgcolor=PARCHMENT if index == 0 else "transparent",
             content=ft.Row(
                 spacing=4,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Icon(icon, size=14, color="#9898B8"),
-                    ft.Text(label, color="#E8E8F0", size=12),
+                    ft.Icon(icon, size=14, color=GRAY_3 if index == 0 else GRAY_2),
+                    ft.Text(label, color=INK if index == 0 else GRAY_2, size=12),
                 ],
             ),
             on_click=lambda _, idx=index: _select_tab(idx),
@@ -568,7 +440,7 @@ def build_settings_screen(
 
     return ft.Container(
         expand=True,
-        bgcolor="#0D0D1A",
+        bgcolor=PARCHMENT,
         padding=0,
         content=ft.Column(
             spacing=0,
@@ -579,12 +451,12 @@ def build_settings_screen(
                     padding=ft.Padding(20, 0, 16, 0),
                     content=ft.Row(
                         controls=[
-                            ft.Text("Settings", color="#E8E8F0", size=18, weight=ft.FontWeight.W_700),
+                            ft.Text("Settings", color=INK, size=18, weight=ft.FontWeight.W_700),
                             ft.Container(expand=True),
                             ft.IconButton(
                                 icon=ft.Icons.CLOSE,
                                 icon_size=18,
-                                icon_color="#747496",
+                                icon_color=GRAY_3,
                                 on_click=lambda _: on_close(),
                             ),
                         ],
@@ -602,12 +474,12 @@ def build_settings_screen(
                         spacing=8,
                         controls=[
                             ft.TextButton(
-                                content=ft.Text("Reset to Defaults", color="#C45B5B"),
+                                content=ft.Text("Reset to Defaults", color=Theme.color("error")),
                                 on_click=on_reset,
                             ),
                             ft.Container(expand=True),
                             ft.TextButton(
-                                content=ft.Text("Cancel", color="#9898B8"),
+                                content=ft.Text("Cancel", color=GRAY_3),
                                 on_click=lambda _: on_close(),
                             ),
                             _save_button(on_click=on_save),
