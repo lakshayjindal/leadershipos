@@ -12,23 +12,13 @@ import flet as ft
 
 from leadership_os.config.config_manager import ConfigManager
 from leadership_os.core.event_bus import CONFIG_CHANGED, EventBus
-from leadership_os.ui.theme import (
-    GRAY_2,
-    GRAY_3,
-    GRAY_4,
-    HAIRLINE,
-    INK,
-    ON_PRIMARY,
-    PARCHMENT,
-    PRIMARY,
-    Theme,
-)
+from leadership_os.ui.theme import Theme
 
 # ─── Helpers ──────────────────────────────────────────────────────────
 
 
 def _section_label(text: str) -> ft.Text:
-    return ft.Text(text, color=GRAY_3, size=10, weight=ft.FontWeight.W_700)
+    return ft.Text(text, color=Theme.GRAY_3, size=10, weight=ft.FontWeight.W_700)
 
 
 def _setting_row(
@@ -40,7 +30,7 @@ def _setting_row(
     controls: list[ft.Control] = [
         ft.Row(
             controls=[
-                ft.Text(label, color=INK, size=13),
+                ft.Text(label, color=Theme.INK, size=13),
                 ft.Container(expand=True),
                 control,
             ],
@@ -49,19 +39,19 @@ def _setting_row(
     ]
     if description:
         controls.append(
-            ft.Text(description, color=GRAY_4, size=10)
+            ft.Text(description, color=Theme.GRAY_4, size=10)
         )
     return ft.Column(spacing=2, controls=controls)
 
 
 def _divider() -> ft.Divider:
-    return ft.Divider(height=1, color=HAIRLINE)
+    return ft.Divider(height=1, color=Theme.HAIRLINE)
 
 
 def _save_button(on_click) -> ft.Button:
     return ft.Button(
-        content=ft.Text("Save Settings", size=13, color=ON_PRIMARY),
-        bgcolor=PRIMARY,
+        content=ft.Text("Save Settings", size=13, color=Theme.ON_PRIMARY),
+        bgcolor=Theme.PRIMARY,
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"])),
         on_click=on_click,
     )
@@ -193,21 +183,21 @@ def build_settings_screen(
             width=width,
             height=36,
             text_size=13,
-            border=ft.InputBorder.OUTLINE,
-            border_color=HAIRLINE,
-            focused_border_color=PRIMARY,
-            bgcolor="#ffffff",
-            color=INK,
-            dense=True,
-            hint_text=hint,
-        )
+        border=ft.InputBorder.OUTLINE,
+        border_color=Theme.HAIRLINE,
+        focused_border_color=Theme.PRIMARY,
+        bgcolor=Theme.CANVAS,
+        color=Theme.INK,
+        dense=True,
+        hint_text=hint,
+    )
 
     work_schedule_tab = ft.Container(
         padding=20,
         content=ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Work Schedule", color=INK, size=16, weight=ft.FontWeight.W_700),
+                ft.Text("Work Schedule", color=Theme.INK, size=16, weight=ft.FontWeight.W_700),
                 _divider(),
                 _setting_row(
                     "Start Time",
@@ -240,7 +230,7 @@ def build_settings_screen(
         content=ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Interface", color=INK, size=16, weight=ft.FontWeight.W_700),
+                ft.Text("Interface", color=Theme.INK, size=16, weight=ft.FontWeight.W_700),
                 _divider(),
                 _setting_row(
                     "Theme",
@@ -254,10 +244,10 @@ def build_settings_screen(
                             ft.dropdown.Option("light", "Light"),
                             ft.dropdown.Option("system", "System"),
                         ],
-                        border_color=HAIRLINE,
-                        focused_border_color=PRIMARY,
-                        bgcolor="#ffffff",
-                        color=INK,
+                        border_color=Theme.HAIRLINE,
+                        focused_border_color=Theme.PRIMARY,
+                        bgcolor=Theme.CANVAS,
+                        color=Theme.INK,
                         text_size=13,
                         dense=True,
                     ),
@@ -272,7 +262,7 @@ def build_settings_screen(
                         max=1.0,
                         divisions=9,
                         width=160,
-                        active_color=PRIMARY,
+                        active_color=Theme.PRIMARY,
                     ),
                     "Transparency of the floating overlay window",
                 ),
@@ -281,7 +271,7 @@ def build_settings_screen(
                     ft.Switch(
                         ref=show_overlay,
                         value=bool(ui.get("show_overlay", True)),
-                        active_color=PRIMARY,
+                        active_color=Theme.PRIMARY,
                     ),
                     "Show floating overlay window during work",
                 ),
@@ -296,7 +286,7 @@ def build_settings_screen(
         content=ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Journaling", color=INK, size=16, weight=ft.FontWeight.W_700),
+                ft.Text("Journaling", color=Theme.INK, size=16, weight=ft.FontWeight.W_700),
                 _divider(),
                 _setting_row(
                     "Obsidian Vault Path",
@@ -319,7 +309,7 @@ def build_settings_screen(
         content=ft.Column(
             spacing=10,
             controls=[
-                ft.Text("Keyboard Shortcuts", color=INK, size=16, weight=ft.FontWeight.W_700),
+                ft.Text("Keyboard Shortcuts", color=Theme.INK, size=16, weight=ft.FontWeight.W_700),
                 _divider(),
                 _setting_row(
                     "Create Task",
@@ -360,14 +350,14 @@ def build_settings_screen(
         content=ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Startup Behavior", color=INK, size=16, weight=ft.FontWeight.W_700),
+                ft.Text("Startup Behavior", color=Theme.INK, size=16, weight=ft.FontWeight.W_700),
                 _divider(),
                 _setting_row(
                     "Minimize to System Tray",
                     ft.Switch(
                         ref=minimize_to_tray,
                         value=bool(startup.get("minimize_to_tray", True)),
-                        active_color=PRIMARY,
+                        active_color=Theme.PRIMARY,
                     ),
                     "Minimize to tray instead of closing when window is closed",
                 ),
@@ -376,7 +366,7 @@ def build_settings_screen(
                     ft.Switch(
                         ref=restore_session,
                         value=bool(startup.get("restore_previous_session", True)),
-                        active_color=PRIMARY,
+                        active_color=Theme.PRIMARY,
                     ),
                     "Automatically restore your previous session on startup",
                 ),
@@ -408,7 +398,7 @@ def build_settings_screen(
     def _select_tab(index: int):
         for i, ref in enumerate(tab_button_refs):
             if ref.current:
-                ref.current.bgcolor = PARCHMENT if i == index else "transparent"
+                ref.current.bgcolor = Theme.PARCHMENT if i == index else "transparent"
         active_tab_content.content = tab_views[index]
         active_tab_content.update()
 
@@ -417,13 +407,13 @@ def build_settings_screen(
             ref=tab_button_refs[index],
             padding=ft.Padding(10, 6, 10, 6),
             border_radius=Theme.radius["sm"],
-            bgcolor=PARCHMENT if index == 0 else "transparent",
+            bgcolor=Theme.PARCHMENT if index == 0 else "transparent",
             content=ft.Row(
                 spacing=4,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Icon(icon, size=14, color=GRAY_3 if index == 0 else GRAY_2),
-                    ft.Text(label, color=INK if index == 0 else GRAY_2, size=12),
+                    ft.Icon(icon, size=14, color=Theme.GRAY_3 if index == 0 else Theme.GRAY_2),
+                    ft.Text(label, color=Theme.INK if index == 0 else Theme.GRAY_2, size=12),
                 ],
             ),
             on_click=lambda _, idx=index: _select_tab(idx),
@@ -440,7 +430,7 @@ def build_settings_screen(
 
     return ft.Container(
         expand=True,
-        bgcolor=PARCHMENT,
+        bgcolor=Theme.PARCHMENT,
         padding=0,
         content=ft.Column(
             spacing=0,
@@ -451,12 +441,12 @@ def build_settings_screen(
                     padding=ft.Padding(20, 0, 16, 0),
                     content=ft.Row(
                         controls=[
-                            ft.Text("Settings", color=INK, size=18, weight=ft.FontWeight.W_700),
+                            ft.Text("Settings", color=Theme.INK, size=18, weight=ft.FontWeight.W_700),
                             ft.Container(expand=True),
                             ft.IconButton(
                                 icon=ft.Icons.CLOSE,
                                 icon_size=18,
-                                icon_color=GRAY_3,
+                                icon_color=Theme.GRAY_3,
                                 on_click=lambda _: on_close(),
                             ),
                         ],
@@ -479,7 +469,7 @@ def build_settings_screen(
                             ),
                             ft.Container(expand=True),
                             ft.TextButton(
-                                content=ft.Text("Cancel", color=GRAY_3),
+                                content=ft.Text("Cancel", color=Theme.GRAY_3),
                                 on_click=lambda _: on_close(),
                             ),
                             _save_button(on_click=on_save),

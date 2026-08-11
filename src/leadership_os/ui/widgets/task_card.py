@@ -8,18 +8,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from leadership_os.ui.theme import (
-    GRAY_2,
-    GRAY_3,
-    GRAY_5,
-    HAIRLINE,
-    INK,
-    PEARL,
-    PRIMARY,
-    PRIORITY_LABELS,
-    PRIORITY_RGBA,
-    Theme,
-)
+from leadership_os.ui.theme import PRIORITY_LABELS, PRIORITY_RGBA, Theme
 from leadership_os.utils.time_utils import format_duration_short
 
 
@@ -67,16 +56,16 @@ def build_task_card(
     # Status icon
     if is_active:
         status_icon = ft.Icons.PLAY_CIRCLE
-        status_color = PRIMARY
+        status_color = Theme.PRIMARY
     elif is_completed:
         status_icon = ft.Icons.CHECK_CIRCLE
         status_color = Theme.color("success")
     elif status == "paused":
         status_icon = ft.Icons.PAUSE_CIRCLE
-        status_color = GRAY_3
+        status_color = Theme.GRAY_3
     else:
         status_icon = ft.Icons.RADIO_BUTTON_UNCHECKED
-        status_color = GRAY_2
+        status_color = Theme.GRAY_2
 
     # Time display
     if actual_seconds > 0:
@@ -87,16 +76,16 @@ def build_task_card(
         time_text = ""
 
     # Title color
-    title_color = INK if not is_completed else GRAY_3
+    title_color = Theme.INK if not is_completed else Theme.GRAY_3
     title_opacity = 0.6 if is_completed else 1.0
 
     return ft.Container(
         height=48,
-        bgcolor=PEARL if is_selected else "#ffffff",
+        bgcolor=Theme.PEARL if is_selected else Theme.CANVAS,
         border_radius=Theme.radius["sm"],
         border=ft.Border.all(
             2 if is_selected else 1,
-            PRIMARY if is_selected else HAIRLINE,
+            Theme.PRIMARY if is_selected else Theme.HAIRLINE,
         ),
         padding=0,
         content=ft.Row(
@@ -157,7 +146,7 @@ def build_task_card(
                                     # Time
                                     ft.Text(
                                         time_text,
-                                        color=GRAY_3 if time_text else "transparent",
+                                        color=Theme.GRAY_3 if time_text else "transparent",
                                         size=10,
                                         visible=bool(time_text),
                                     ),
@@ -180,7 +169,7 @@ def build_task_card(
                         ft.IconButton(
                             icon=ft.Icons.EDIT,
                             icon_size=13,
-                            icon_color=GRAY_5,
+                            icon_color=Theme.GRAY_5,
                             width=22,
                             height=22,
                             on_click=lambda _: on_edit(),
@@ -188,7 +177,7 @@ def build_task_card(
                         ft.IconButton(
                             icon=ft.Icons.DELETE_OUTLINE,
                             icon_size=13,
-                            icon_color=GRAY_5,
+                            icon_color=Theme.GRAY_5,
                             width=22,
                             height=22,
                             on_click=lambda _: on_delete(),

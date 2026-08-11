@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from leadership_os.ui.theme import GRAY_3, HAIRLINE, PARCHMENT
+from leadership_os.ui.theme import Theme
 
 
 def build_status_bar(
@@ -26,14 +26,14 @@ def build_status_bar(
     """
     return ft.Container(
         height=22,
-        bgcolor=PARCHMENT,
+        bgcolor=Theme.PARCHMENT,
         padding=ft.Padding(16, 0, 16, 0),
-        border=ft.Border(top=ft.BorderSide(1, HAIRLINE)),
+        border=ft.Border(top=ft.BorderSide(1, Theme.HAIRLINE)),
         content=ft.Row(
             spacing=16,
             controls=[
-                ft.Text(f"Focus {focus_time_display}", color=GRAY_3, size=9),
-                ft.Text(f"Done {completed_display}", color=GRAY_3, size=9),
+                ft.Text(f"Focus {focus_time_display}", color=Theme.GRAY_3, size=9),
+                ft.Text(f"Done {completed_display}", color=Theme.GRAY_3, size=9),
                 ft.Container(expand=True),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,

@@ -12,18 +12,7 @@ from collections.abc import Callable
 
 import flet as ft
 
-from leadership_os.ui.theme import (
-    GRAY_2,
-    GRAY_3,
-    GRAY_4,
-    HAIRLINE,
-    INK,
-    ON_PRIMARY,
-    PARCHMENT,
-    PEARL,
-    PRIMARY,
-    Theme,
-)
+from leadership_os.ui.theme import Theme
 from leadership_os.utils.time_utils import format_duration_short
 
 # Forward declarations for type hints
@@ -32,21 +21,21 @@ OnSkip = Callable[[], None]
 OnCancel = Callable[[], None]
 
 
-def _stat_card(label: str, value: str, color: str = INK) -> ft.Container:
+def _stat_card(label: str, value: str, color: str = Theme.INK) -> ft.Container:
     """Build a compact summary stat card."""
     return ft.Container(
         expand=True,
         height=70,
-        bgcolor=PEARL,
+        bgcolor=Theme.PEARL,
         border_radius=Theme.radius["lg"],
-        border=ft.Border.all(1, HAIRLINE),
+        border=ft.Border.all(1, Theme.HAIRLINE),
         padding=ft.Padding(10, 10, 10, 10),
         content=ft.Column(
             spacing=4,
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
                 ft.Text(value, color=color, size=22, weight=ft.FontWeight.W_700),
-                ft.Text(label, color=GRAY_3, size=9, weight=ft.FontWeight.W_700),
+                ft.Text(label, color=Theme.GRAY_3, size=9, weight=ft.FontWeight.W_700),
             ],
         ),
     )
@@ -56,7 +45,7 @@ def _section_header(title: str) -> ft.Container:
     """Build a small uppercase section header."""
     return ft.Container(
         padding=ft.Padding(0, 16, 0, 8),
-        content=ft.Text(title, color=GRAY_3, size=10, weight=ft.FontWeight.W_700),
+        content=ft.Text(title, color=Theme.GRAY_3, size=10, weight=ft.FontWeight.W_700),
     )
 
 
@@ -95,12 +84,12 @@ def _text_field(
         max_lines=4,
         height=height,
         border=ft.InputBorder.OUTLINE,
-        border_color=HAIRLINE,
-        focused_border_color=PRIMARY,
-        bgcolor="#ffffff",
-        color=INK,
-        hint_style=ft.TextStyle(color=GRAY_4, size=12),
-        label_style=ft.TextStyle(color=GRAY_3, size=12),
+        border_color=Theme.HAIRLINE,
+        focused_border_color=Theme.PRIMARY,
+        bgcolor=Theme.CANVAS,
+        color=Theme.INK,
+        hint_style=ft.TextStyle(color=Theme.GRAY_4, size=12),
+        label_style=ft.TextStyle(color=Theme.GRAY_3, size=12),
     )
 
 
@@ -213,16 +202,16 @@ def build_review_screen(
     if tomorrow_tasks:
         for title in tomorrow_tasks:
             tomorrow_controls.append(
-                ft.Text(f"  •  {title}", color=GRAY_2, size=12)
+                ft.Text(f"  •  {title}", color=Theme.GRAY_2, size=12)
             )
     else:
         tomorrow_controls.append(
-            ft.Text("No pending tasks for tomorrow.", color=GRAY_4, size=12, italic=True)
+            ft.Text("No pending tasks for tomorrow.", color=Theme.GRAY_4, size=12, italic=True)
         )
 
     return ft.Container(
         expand=True,
-        bgcolor=PARCHMENT,
+        bgcolor=Theme.PARCHMENT,
         padding=ft.Padding(24, 16, 24, 12),
         content=ft.Column(
             spacing=0,
@@ -230,7 +219,7 @@ def build_review_screen(
                 # Header
                 ft.Row(
                     controls=[
-                        ft.Text("End-of-Day Review", color=INK, size=18, weight=ft.FontWeight.W_700),
+                        ft.Text("End-of-Day Review", color=Theme.INK, size=18, weight=ft.FontWeight.W_700),
                         ft.Container(expand=True),
                     ],
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -238,7 +227,7 @@ def build_review_screen(
                 ft.Container(height=4),
                 ft.Text(
                     "Reflect on today before you close out. Your answers become part of the daily journal.",
-                    color=GRAY_3, size=11,
+                    color=Theme.GRAY_3, size=11,
                 ),
                 # Summary
                 _section_header("TODAY'S SUMMARY"),
@@ -249,9 +238,9 @@ def build_review_screen(
                 # Tomorrow preview
                 _section_header("TOMORROW"),
                 ft.Container(
-                    bgcolor=PEARL,
+                    bgcolor=Theme.PEARL,
                     border_radius=Theme.radius["lg"],
-                    border=ft.Border.all(1, HAIRLINE),
+                    border=ft.Border.all(1, Theme.HAIRLINE),
                     padding=ft.Padding(12, 10, 12, 10),
                     content=ft.Column(spacing=4, controls=tomorrow_controls),
                 ),
@@ -261,7 +250,7 @@ def build_review_screen(
                     spacing=8,
                     controls=[
                         ft.TextButton(
-                            content=ft.Text("Cancel", color=GRAY_3),
+                            content=ft.Text("Cancel", color=Theme.GRAY_3),
                             on_click=lambda _: on_cancel() if on_cancel else None,
                         ),
                         ft.TextButton(
@@ -271,8 +260,8 @@ def build_review_screen(
                         ft.Container(expand=True),
                         ft.Button(
                             ref=finalize_button_ref,
-                            content=ft.Text("Finalize Day", color=ON_PRIMARY),
-                            bgcolor=PRIMARY,
+                            content=ft.Text("Finalize Day", color=Theme.ON_PRIMARY),
+                            bgcolor=Theme.PRIMARY,
                             on_click=_handle_finalize,
                             style=ft.ButtonStyle(
                                 shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"]),

@@ -27,16 +27,7 @@ import flet as ft
 from leadership_os.core.enums import TaskStatus
 from leadership_os.core.event_bus import CONFIG_CHANGED
 from leadership_os.core.models import Reflection
-from leadership_os.ui.theme import build_flet_theme
-from leadership_os.ui.theme import (
-    GRAY_2,
-    GRAY_3,
-    HAIRLINE,
-    INK,
-    PARCHMENT,
-    PRIMARY,
-    Theme,
-)
+from leadership_os.ui.theme import Theme, build_flet_theme
 from leadership_os.ui.widgets.execution_panel import build_execution_panel
 from leadership_os.ui.widgets.review_screen import build_review_screen
 from leadership_os.ui.widgets.sidebar import build_sidebar
@@ -212,10 +203,12 @@ class LeadershipOSApp:
         """Main async entry point — called by ft.app(target=...)."""
         self.page = page
         page.title = "Leadership OS"
+        # Apply the active theme palette from config before building UI
+        Theme.set_mode(self.config.get("ui", "theme", "light") if self.config else "light")
         page.theme = build_flet_theme()
         page.theme_mode = self._resolve_theme_mode()
         page.padding = 0
-        page.bgcolor = PARCHMENT
+        page.bgcolor = Theme.PARCHMENT
         page.window.min_width = 900
         page.window.min_height = 600
         page.window.width = 1200
@@ -352,6 +345,7 @@ class LeadershipOSApp:
             completed_count=0,
             total_count=0,
             status_text="Ready",
+            active_view=self._nav_view,
             today_callback=self.switch_to_today,
             history_callback=self.switch_to_history,
             settings_callback=self.switch_to_settings,
@@ -423,24 +417,24 @@ class LeadershipOSApp:
             height=196,
             bgcolor="#ffffff",
             border_radius=Theme.radius["lg"],
-            border=ft.Border.all(1, HAIRLINE),
+            border=ft.Border.all(1, Theme.HAIRLINE),
             padding=ft.Padding(20, 16, 20, 16),
             content=ft.Column(
                 spacing=0,
                 controls=[
-                    ft.Icon(ft.Icons.WB_SUNNY_OUTLINED, size=26, color=GRAY_2),
+                    ft.Icon(ft.Icons.WB_SUNNY_OUTLINED, size=26, color=Theme.GRAY_2),
                     ft.Container(height=12),
-                    ft.Text("Your workspace is clear", color=INK, size=14, weight=ft.FontWeight.W_700),
+                    ft.Text("Your workspace is clear", color=Theme.INK, size=14, weight=ft.FontWeight.W_700),
                     ft.Container(height=6),
                     ft.Text(
                         "Add a task above to begin. Your focus timer and progress will appear here as you work.",
-                        color=GRAY_3, size=11, height=1.5,
+                        color=Theme.GRAY_3, size=11, height=1.5,
                     ),
                     ft.Container(height=12),
-                    ft.Text("Quick tips", color=GRAY_3, size=9, weight=ft.FontWeight.W_700),
+                    ft.Text("Quick tips", color=Theme.GRAY_3, size=9, weight=ft.FontWeight.W_700),
                     ft.Container(height=4),
-                    ft.Text("  •  Press Enter to add a task", color=GRAY_3, size=10),
-                    ft.Text("  •  Click a task to start working on it", color=GRAY_3, size=10),
+                    ft.Text("  •  Press Enter to add a task", color=Theme.GRAY_3, size=10),
+                    ft.Text("  •  Click a task to start working on it", color=Theme.GRAY_3, size=10),
                 ],
             ),
         )
@@ -453,22 +447,22 @@ class LeadershipOSApp:
             visible=False,
             bgcolor="#ffffff",
             border_radius=Theme.radius["lg"],
-            border=ft.Border.all(1, HAIRLINE),
+            border=ft.Border.all(1, Theme.HAIRLINE),
             padding=ft.Padding(14, 10, 14, 10),
             content=ft.Row(
                 spacing=12,
                 controls=[
                     # Accent bar
-                    ft.Container(width=3, height=36, bgcolor=PRIMARY, border_radius=1.5),
+                    ft.Container(width=3, height=36, bgcolor=Theme.PRIMARY, border_radius=1.5),
                     ft.Column(
                         spacing=2,
                         expand=True,
                         controls=[
-                            ft.Text("CURRENT FOCUS", color=GRAY_3, size=9, weight=ft.FontWeight.W_700),
-                            ft.Text("", ref=self._focus_title, color=INK, size=16, weight=ft.FontWeight.W_700),
+                            ft.Text("CURRENT FOCUS", color=Theme.GRAY_3, size=9, weight=ft.FontWeight.W_700),
+                            ft.Text("", ref=self._focus_title, color=Theme.INK, size=16, weight=ft.FontWeight.W_700),
                         ],
                     ),
-                    ft.Text("00:00", ref=self._focus_time, color=GRAY_3, size=16, weight=ft.FontWeight.W_700),
+                    ft.Text("00:00", ref=self._focus_time, color=Theme.GRAY_3, size=16, weight=ft.FontWeight.W_700),
                 ],
             ),
         )
@@ -483,18 +477,18 @@ class LeadershipOSApp:
                     width=320,
                     height=36,
                     border=ft.InputBorder.OUTLINE,
-                    border_color=HAIRLINE,
-                    focused_border_color=PRIMARY,
+                    border_color=Theme.HAIRLINE,
+                    focused_border_color=Theme.PRIMARY,
                     bgcolor="#ffffff",
-                    text_style=ft.TextStyle(color=INK, size=13),
-                    hint_style=ft.TextStyle(color=GRAY_3, size=13),
+                    text_style=ft.TextStyle(color=Theme.INK, size=13),
+                    hint_style=ft.TextStyle(color=Theme.GRAY_3, size=13),
                     dense=True,
                     on_submit=lambda _: self.on_task_submit(),
                 ),
                 ft.Container(
                     width=36,
                     height=36,
-                    bgcolor=PRIMARY,
+                    bgcolor=Theme.PRIMARY,
                     border_radius=ft.BorderRadius(top_left=0, top_right=8, bottom_right=8, bottom_left=0),
                     alignment=ft.Alignment(0,0),
                     on_click=lambda _: self.on_task_submit(),
@@ -523,7 +517,7 @@ class LeadershipOSApp:
             content=ft.Row(
                 spacing=8,
                 controls=[
-                    ft.Text("TASKS", color=GRAY_2, size=9, weight=ft.FontWeight.W_700),
+                    ft.Text("TASKS", color=Theme.GRAY_2, size=9, weight=ft.FontWeight.W_700),
                     ft.Divider(height=1, color="#f0f0f0"),
                 ],
             ),
@@ -546,26 +540,26 @@ class LeadershipOSApp:
 
         return ft.Container(
             expand=True,
-            bgcolor=PARCHMENT,
+            bgcolor=Theme.PARCHMENT,
             padding=ft.Padding(24, 16, 24, 12),
             content=ft.Column(
                 spacing=0,
                 controls=[
                     # Date
-                    ft.Text("Today, July 20", ref=self._date_label, color=GRAY_3, size=9),
+                    ft.Text("Today, July 20", ref=self._date_label, color=Theme.GRAY_3, size=9),
                     ft.Container(height=4),
                     # Today's Plan heading + End Day action
                     ft.Row(
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
-                            ft.Text("Today's Plan", color=INK, size=18, weight=ft.FontWeight.W_700),
+                            ft.Text("Today's Plan", color=Theme.INK, size=18, weight=ft.FontWeight.W_700),
                             ft.Container(expand=True),
                             ft.TextButton(
                                 content=ft.Row(
                                     spacing=6,
                                     controls=[
-                                        ft.Icon(ft.Icons.EDIT_CALENDAR, size=16, color=PRIMARY),
-                                        ft.Text("End Day", color=PRIMARY, size=12, weight=ft.FontWeight.W_600),
+                                        ft.Icon(ft.Icons.EDIT_CALENDAR, size=16, color=Theme.PRIMARY),
+                                        ft.Text("End Day", color=Theme.PRIMARY, size=12, weight=ft.FontWeight.W_600),
                                     ],
                                 ),
                                 on_click=lambda _: self.switch_to_review(),
@@ -767,6 +761,7 @@ class LeadershipOSApp:
             completed_count=completed,
             total_count=total,
             status_text=status_text,
+            active_view=self._nav_view,
             today_callback=self.switch_to_today,
             history_callback=self.switch_to_history,
             settings_callback=self.switch_to_settings,
@@ -856,8 +851,8 @@ class LeadershipOSApp:
             row = self._status_bar.content
             if isinstance(row, ft.Row):
                 row.controls = [
-                    ft.Text(f"Focus {focus_short}", color=GRAY_3, size=9),
-                    ft.Text(f"Done {int(completed)}", color=GRAY_3, size=9),
+                    ft.Text(f"Focus {focus_short}", color=Theme.GRAY_3, size=9),
+                    ft.Text(f"Done {int(completed)}", color=Theme.GRAY_3, size=9),
                     ft.Container(expand=True),
                 ]
 
@@ -890,6 +885,29 @@ class LeadershipOSApp:
             status_text = "Ready"
 
         self._rebuild_main_view(day_id, active_task_id, focus_time, tasks, completed, total, status_text)
+
+    def _refresh_sidebar(self) -> None:
+        """Rebuild just the sidebar so the active nav highlight tracks the
+        current view (Today / History / Settings)."""
+        if not self._main_row or not self._current_day:
+            return
+        day_id = self._current_day.id
+        focus_time = self.timer_engine.get_day_focus_seconds(day_id) if self.timer_engine else 0
+        tasks = self.task_engine.get_tasks(day_id) if self.task_engine else []
+        completed = sum(1 for t in tasks if t.status == TaskStatus.COMPLETED.value)
+        total = len(tasks)
+        new_sidebar = build_sidebar(
+            app_state=self._current_state,
+            focus_time=focus_time,
+            completed_count=completed,
+            total_count=total,
+            status_text=self._get_status_text(),
+            active_view=self._nav_view,
+            today_callback=self.switch_to_today,
+            history_callback=self.switch_to_history,
+            settings_callback=self.switch_to_settings,
+        )
+        self._main_row.controls[0] = new_sidebar
 
     # ─── Event Handler ───────────────────────────────────────────────
 
@@ -1050,12 +1068,18 @@ class LeadershipOSApp:
         """Navigate to the History view."""
         self._nav_view = "history"
         self._show_history_workspace()
+        self._refresh_sidebar()
+        if self.page:
+            self.page.update()
         logger.info("Navigated to History")
 
     def switch_to_settings(self) -> None:
         """Navigate to the Settings view."""
         self._nav_view = "settings"
         self._show_settings_workspace()
+        self._refresh_sidebar()
+        if self.page:
+            self.page.update()
         logger.info("Navigated to Settings")
 
     def switch_to_review(self) -> None:
@@ -1063,6 +1087,9 @@ class LeadershipOSApp:
         self._nav_view = "review"
         self._current_state = "review"
         self._show_review_workspace()
+        self._refresh_sidebar()
+        if self.page:
+            self.page.update()
         logger.info("Navigated to End-of-Day Review")
 
     def _show_today_workspace(self) -> None:
@@ -1076,7 +1103,10 @@ class LeadershipOSApp:
         """Replace center workspace with the History screen."""
         if not self._main_row or not self.db:
             return
-        from leadership_os.ui.widgets.history_screen import build_history_screen, init_history_list
+        from leadership_os.ui.widgets.history_screen import (
+            build_history_screen,
+            init_history_list,
+        )
         history = build_history_screen(self.db, on_close=self.switch_to_today)
         self._history_container = history
         self._main_row.controls[1] = history
@@ -1268,11 +1298,41 @@ class LeadershipOSApp:
         """Reload shortcuts and apply theme when config changes."""
         if self._shortcut_handler:
             self._shortcut_handler.reload_shortcuts()
-        if self.page:
-            self.page.theme_mode = self._resolve_theme_mode()
-            self.page.bgcolor = PARCHMENT
-            self.page.update()
+        self._apply_theme()
         logger.info("Configuration change detected, shortcuts + theme reloaded")
+
+    def _apply_theme(self) -> None:
+        """Apply the configured theme (light/dark) and rebuild the UI so all
+        widget colors re-resolve from the active palette."""
+        if not self.page:
+            return
+        theme_name = (self.config.get("ui", "theme", "light") if self.config else "light").lower()
+        Theme.set_mode(theme_name)
+        self.page.theme = build_flet_theme()
+        self.page.theme_mode = self._resolve_theme_mode()
+        self.page.bgcolor = Theme.PARCHMENT
+
+        # Rebuild the correct center workspace for the current view with the
+        # new palette, then refresh chrome (sidebar + panel) and populate data.
+        view = self._nav_view
+        if view == "history":
+            self._show_history_workspace()
+        elif view == "settings":
+            self._show_settings_workspace()
+        elif view == "review":
+            self._show_review_workspace()
+        elif view == "carry_forward":
+            self._show_carry_forward_workspace()
+        elif view == "break_dialog":
+            self._show_break_type_dialog()
+        else:
+            # Today (and today-context views) — rebuild the center container
+            # so its build-time colors re-resolve, then repopulate the refs.
+            self._show_today_workspace()
+            self._refresh_ui()
+        self._refresh_sidebar()
+        if self.page:
+            self.page.update()
 
     # ─── Palette Callbacks ──────────────────────────────────────────
 
@@ -1443,13 +1503,12 @@ class LeadershipOSApp:
         previous_days = self.db.get_previous_days(limit=5)
         incomplete: list = []
         day_map: dict[str, str] = {}
-        from leadership_os.core.enums import TaskStatus as TS
         for prev_day in previous_days:
             if prev_day.id == self._current_day.id:
                 continue
             tasks = self.db.get_tasks_by_day(prev_day.id)
             for t in tasks:
-                if t.status in (TS.PENDING.value, TS.ACTIVE.value, TS.PAUSED.value, TS.CARRIED_FORWARD.value):
+                if t.status in (TaskStatus.PENDING.value, TaskStatus.ACTIVE.value, TaskStatus.PAUSED.value, TaskStatus.CARRIED_FORWARD.value):
                     incomplete.append(t)
                     day_map[t.id] = prev_day.date
 
@@ -1465,7 +1524,9 @@ class LeadershipOSApp:
         """Replace center workspace with the carry-forward review screen."""
         if not self._main_row:
             return
-        from leadership_os.ui.widgets.carry_forward_dialog import build_carry_forward_dialog
+        from leadership_os.ui.widgets.carry_forward_dialog import (
+            build_carry_forward_dialog,
+        )
 
         dialog = build_carry_forward_dialog(
             tasks=self._carry_forward_tasks,

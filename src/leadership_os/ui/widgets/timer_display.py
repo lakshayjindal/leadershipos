@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from leadership_os.ui.theme import GRAY_2, GRAY_5, PRIMARY
+from leadership_os.ui.theme import Theme
 
 
 def build_timer_display(
@@ -27,7 +27,7 @@ def build_timer_display(
     Returns:
         A Container representing the timer display.
     """
-    timer_color = PRIMARY if is_running else GRAY_2
+    timer_color = Theme.PRIMARY if is_running else Theme.GRAY_2
 
     content_controls = [
         ft.Container(
@@ -63,12 +63,12 @@ def build_timer_display(
                             width=50,
                             height=50,
                             border_radius=25,
-                            border=ft.Border.all(3, GRAY_5),
+                            border=ft.Border.all(3, Theme.GRAY_5),
                         ),
                         # ProgressRing overlay
                         ft.ProgressRing(
                             value=progress,
-                            color=PRIMARY,
+                            color=Theme.PRIMARY,
                             bgcolor="#e0e0e000",
                             width=50,
                             height=50,

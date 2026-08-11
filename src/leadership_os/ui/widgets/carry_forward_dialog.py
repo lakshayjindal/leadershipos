@@ -16,17 +16,7 @@ from collections.abc import Callable
 import flet as ft
 
 from leadership_os.core.models import Task
-from leadership_os.ui.theme import (
-    GRAY_2,
-    GRAY_3,
-    HAIRLINE,
-    INK,
-    ON_PRIMARY,
-    PARCHMENT,
-    PEARL,
-    PRIMARY,
-    Theme,
-)
+from leadership_os.ui.theme import Theme
 
 
 def build_carry_forward_dialog(
@@ -55,7 +45,7 @@ def build_carry_forward_dialog(
     if not tasks:
         return ft.Container(
             expand=True,
-            bgcolor=PARCHMENT,
+            bgcolor=Theme.PARCHMENT,
             padding=ft.Padding(24, 16, 24, 12),
             content=ft.Column(
                 spacing=12,
@@ -63,13 +53,13 @@ def build_carry_forward_dialog(
                 controls=[
                     ft.Container(height=40),
                     ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, size=36, color=Theme.color("success")),
-                    ft.Text("No unfinished tasks from yesterday", color=GRAY_2, size=15, weight=ft.FontWeight.W_700),
-                    ft.Text("You're all caught up! Start fresh today.", color=GRAY_3, size=12),
+                    ft.Text("No unfinished tasks from yesterday", color=Theme.GRAY_2, size=15, weight=ft.FontWeight.W_700),
+                    ft.Text("You're all caught up! Start fresh today.", color=Theme.GRAY_3, size=12),
                     ft.Container(height=16),
                     ft.Button(
-                        content=ft.Text("Begin Today", color=ON_PRIMARY),
+                        content=ft.Text("Begin Today", color=Theme.ON_PRIMARY),
                         on_click=lambda _: on_done(),
-                        bgcolor=PRIMARY,
+                        bgcolor=Theme.PRIMARY,
                         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"])),
                     ),
                 ],
@@ -80,22 +70,22 @@ def build_carry_forward_dialog(
     priority_colors = {
         "critical": Theme.color("error"),
         "high": Theme.color("warning"),
-        "medium": PRIMARY,
-        "low": GRAY_3,
+        "medium": Theme.PRIMARY,
+        "low": Theme.GRAY_3,
     }
 
     task_rows: list[ft.Control] = []
 
     for task in tasks:
-        pri_color = priority_colors.get(task.priority, GRAY_3)
+        pri_color = priority_colors.get(task.priority, Theme.GRAY_3)
         day_date = task_day_map.get(task.id, "")
         day_label = f" · {day_date}" if day_date else ""
 
         task_rows.append(
             ft.Container(
-                bgcolor=PEARL,
+                bgcolor=Theme.PEARL,
                 border_radius=Theme.radius["lg"],
-                border=ft.Border.all(1, HAIRLINE),
+                border=ft.Border.all(1, Theme.HAIRLINE),
                 padding=ft.Padding(12, 10, 12, 10),
                 content=ft.Column(
                     spacing=8,
@@ -110,10 +100,10 @@ def build_carry_forward_dialog(
                                     border_radius=3,
                                     bgcolor=pri_color,
                                 ),
-                                ft.Text(task.title, color=INK, size=14, weight=ft.FontWeight.W_600, expand=True),
+                                ft.Text(task.title, color=Theme.INK, size=14, weight=ft.FontWeight.W_600, expand=True),
                                 ft.Text(
                                     task.priority.upper() + day_label,
-                                    color=GRAY_3,
+                                    color=Theme.GRAY_3,
                                     size=10,
                                 ),
                             ],
@@ -123,10 +113,10 @@ def build_carry_forward_dialog(
                             spacing=6,
                             controls=[
                                 ft.Button(
-                                    content=ft.Text("Continue Today", size=11, color=ON_PRIMARY),
+                                    content=ft.Text("Continue Today", size=11, color=Theme.ON_PRIMARY),
                                     on_click=lambda _, t=task: on_continue(t.id),
                                     height=30,
-                                    bgcolor=PRIMARY,
+                                    bgcolor=Theme.PRIMARY,
                                     style=ft.ButtonStyle(
                                         shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"]),
                                         padding=ft.Padding(10, 0, 10, 0),
@@ -137,7 +127,7 @@ def build_carry_forward_dialog(
                                     on_click=lambda _, t=task: on_archive(t.id),
                                     height=30,
                                     style=ft.ButtonStyle(
-                                        color=GRAY_2,
+                                        color=Theme.GRAY_2,
                                         shape=ft.RoundedRectangleBorder(radius=Theme.radius["sm"]),
                                         padding=ft.Padding(8, 0, 8, 0),
                                     ),
@@ -161,7 +151,7 @@ def build_carry_forward_dialog(
 
     return ft.Container(
         expand=True,
-        bgcolor=PARCHMENT,
+        bgcolor=Theme.PARCHMENT,
         padding=ft.Padding(24, 16, 24, 12),
         content=ft.Column(
             spacing=0,
@@ -172,14 +162,14 @@ def build_carry_forward_dialog(
                     controls=[
                         ft.Icon(ft.Icons.ARROW_FORWARD, size=20, color=Theme.color("warning")),
                         ft.Container(width=8),
-                        ft.Text("Carry Forward", color=INK, size=18, weight=ft.FontWeight.W_700),
+                        ft.Text("Carry Forward", color=Theme.INK, size=18, weight=ft.FontWeight.W_700),
                     ],
                 ),
                 ft.Container(height=4),
                 ft.Text(
                     f"You have {len(tasks)} unfinished task{'s' if len(tasks) != 1 else ''} from previous days. "
                     "Decide what to do with each one.",
-                    color=GRAY_2,
+                    color=Theme.GRAY_2,
                     size=12,
                     height=1.4,
                 ),
@@ -200,10 +190,10 @@ def build_carry_forward_dialog(
                     controls=[
                         ft.Container(expand=True),
                         ft.Button(
-                            content=ft.Text("Done — Begin Today", color=ON_PRIMARY),
+                            content=ft.Text("Done — Begin Today", color=Theme.ON_PRIMARY),
                             on_click=lambda _: on_done(),
                             height=40,
-                            bgcolor=PRIMARY,
+                            bgcolor=Theme.PRIMARY,
                             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"])),
                         ),
                     ],

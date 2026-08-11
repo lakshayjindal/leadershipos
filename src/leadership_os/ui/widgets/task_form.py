@@ -9,20 +9,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from leadership_os.ui.theme import (
-    GRAY_2,
-    GRAY_3,
-    GRAY_4,
-    HAIRLINE,
-    INK,
-    ON_PRIMARY,
-    PARCHMENT,
-    PRIMARY,
-    Theme,
-)
-
-# Chip fill — soft parchment tint
-PARCHMENT_CHIP = PARCHMENT
+from leadership_os.ui.theme import Theme
 
 
 def _field(
@@ -43,11 +30,11 @@ def _field(
         height=height,
         max_length=200,
         border=ft.InputBorder.OUTLINE,
-        border_color=HAIRLINE,
-        focused_border_color=PRIMARY,
-        bgcolor="#ffffff",
-        text_style=ft.TextStyle(color=INK, size=13),
-        hint_style=ft.TextStyle(color=GRAY_4, size=13),
+        border_color=Theme.HAIRLINE,
+        focused_border_color=Theme.PRIMARY,
+        bgcolor=Theme.CANVAS,
+        text_style=ft.TextStyle(color=Theme.INK, size=13),
+        hint_style=ft.TextStyle(color=Theme.GRAY_4, size=13),
         keyboard_type=keyboard_type,
         multiline=multiline,
         min_lines=min_lines,
@@ -104,7 +91,7 @@ def build_task_form(
                 content="Advanced options" if not advanced_visible else "Hide options",
                 on_click=lambda _: on_toggle_advanced(),
                 style=ft.ButtonStyle(
-                    color=GRAY_2,
+                    color=Theme.GRAY_2,
                 ),
             ),
             # Advanced fields
@@ -129,20 +116,20 @@ def build_task_form(
                             ft.Chip(
                                 label=ft.Text("Before Lunch", size=10),
                                 on_select=lambda _: on_deadline_change("Before Lunch"),
-                                bgcolor=PARCHMENT_CHIP,
-                                selected_color=PRIMARY,
+                                bgcolor=Theme.PARCHMENT,
+                                selected_color=Theme.PRIMARY,
                             ),
                             ft.Chip(
                                 label=ft.Text("Before Dinner", size=10),
                                 on_select=lambda _: on_deadline_change("Before Dinner"),
-                                bgcolor=PARCHMENT_CHIP,
-                                selected_color=PRIMARY,
+                                bgcolor=Theme.PARCHMENT,
+                                selected_color=Theme.PRIMARY,
                             ),
                             ft.Chip(
                                 label=ft.Text("End of Day", size=10),
                                 on_select=lambda _: on_deadline_change("End of Day"),
-                                bgcolor=PARCHMENT_CHIP,
-                                selected_color=PRIMARY,
+                                bgcolor=Theme.PARCHMENT,
+                                selected_color=Theme.PRIMARY,
                             ),
                         ],
                     ),
@@ -165,12 +152,12 @@ def build_task_form(
                     ft.TextButton(
                         content="Cancel",
                         on_click=lambda _: on_cancel(),
-                        style=ft.ButtonStyle(color=GRAY_3),
+                        style=ft.ButtonStyle(color=Theme.GRAY_3),
                     ),
                     ft.Button(
-                        content=ft.Text("Save" if is_edit_mode else "Create", color=ON_PRIMARY),
+                        content=ft.Text("Save" if is_edit_mode else "Create", color=Theme.ON_PRIMARY),
                         on_click=lambda _: on_submit(),
-                        bgcolor=PRIMARY,
+                        bgcolor=Theme.PRIMARY,
                         style=ft.ButtonStyle(
                             shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"]),
                         ),

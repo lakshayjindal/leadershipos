@@ -8,13 +8,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from leadership_os.ui.theme import (
-    BLACK,
-    GRAY_2,
-    ON_DARK,
-    TINT_ERROR,
-    Theme,
-)
+from leadership_os.ui.theme import Theme
 
 
 def build_top_bar(
@@ -40,15 +34,15 @@ def build_top_bar(
         return ft.IconButton(
             icon=icon,
             icon_size=15,
-            icon_color=GRAY_2,
-            hover_color=ON_DARK,
+            icon_color=Theme.GRAY_2,
+            hover_color=Theme.ON_DARK,
             tooltip=tooltip,
             on_click=lambda _: callback(),
         )
 
     return ft.Container(
         height=nav_height,
-        bgcolor=BLACK,
+        bgcolor=Theme.BLACK,
         content=ft.Row(
             spacing=0,
             controls=[
@@ -56,7 +50,7 @@ def build_top_bar(
                 ft.Container(
                     width=160,
                     height=nav_height,
-                    bgcolor=BLACK,
+                    bgcolor=Theme.BLACK,
                     content=ft.Row(
                         spacing=0,
                         controls=[
@@ -69,7 +63,7 @@ def build_top_bar(
                             ft.Container(width=12),
                             ft.Text(
                                 "Leadership OS",
-                                color=ON_DARK,
+                                color=Theme.ON_DARK,
                                 size=12,
                                 weight=ft.FontWeight.W_600,
                             ),
@@ -83,7 +77,7 @@ def build_top_bar(
                 ft.Container(
                     width=250,
                     height=nav_height,
-                    bgcolor=BLACK,
+                    bgcolor=Theme.BLACK,
                     padding=ft.Padding(8, 0, 8, 0),
                     content=ft.Row(
                         spacing=2,
@@ -115,7 +109,7 @@ def build_top_bar(
                                     ),
                                     on_click=lambda _: on_quit() if on_quit else None,
                                     style=ft.ButtonStyle(
-                                        bgcolor=TINT_ERROR,
+                                        bgcolor=Theme.TINT_ERROR,
                                         shape=ft.RoundedRectangleBorder(radius=Theme.radius["sm"]),
                                         padding=ft.Padding(10, 4, 10, 4),
                                     ),

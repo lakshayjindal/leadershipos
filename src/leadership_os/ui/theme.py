@@ -1,8 +1,10 @@
-"""Theme — Apple-style light design tokens for Leadership OS.
+"""Theme — Apple-style design tokens for Leadership OS (light + dark).
 
 Design language (see DESIGN.md):
 - Light, museum-gallery aesthetic: white / parchment surfaces, pure-black
   global nav, and a single Action Blue (#0066cc) for every interactive element.
+- Dark mode mirrors the same system: near-black surfaces, white ink, and
+  Sky Link Blue (#2997ff) as the interactive accent on dark.
 - No decorative gradients or shadows on chrome. The color change between
   light and dark tiles IS the divider.
 - Typography: SF Pro Display / SF Pro Text with system-ui fallback
@@ -11,6 +13,13 @@ Design language (see DESIGN.md):
 - Radii: sm 8px for compact utility, lg 18px for utility cards, pill for
   CTAs and search inputs. Nothing in between except the rare md 11px.
 - Buttons press with transform scale(0.95) — the system micro-interaction.
+
+Mode handling:
+- Widgets must reference colors as ``Theme.<TOKEN>`` (e.g. ``Theme.INK``)
+  or ``Theme.color("success")`` so values resolve from the ACTIVE palette
+  at widget build time. Import-time constants are provided for backwards
+  compatibility but reflect the light palette.
+- Call ``Theme.set_mode("light" | "dark")`` to switch the active palette.
 """
 
 from __future__ import annotations
@@ -21,7 +30,7 @@ import flet as ft
 
 # ─── Apple-style Light Palette ────────────────────────────────────────
 
-# Canonical tokens from DESIGN.md
+# Canonical tokens from DESIGN.md (light)
 CANVAS = "#ffffff"              # Pure white canvas
 PARCHMENT = "#f5f5f7"           # Apple signature off-white
 PEARL = "#fafafc"               # Near-white secondary button fill
@@ -58,41 +67,131 @@ GRAY_3 = "#86868b"              # Tertiary label
 GRAY_4 = "#aeaeb2"              # Quaternary label
 GRAY_5 = "#d1d1d6"              # Quaternary faint / placeholder
 
-# ─── Compat palette (old keys → light values) ─────────────────────────
-# The key names are preserved so existing `Theme.color("background")`
-# style lookups keep working; values now follow the Apple light system.
+# Dark chrome (sidebar shell — stable dark in BOTH modes)
+CHROME = "#1d1d1f"              # Sidebar shell background
+CHROME_ACTIVE = "#3a3a3c"       # Sidebar active pill
+
+# ─── Dark Palette (Apple dark system) ────────────────────────────────
+
+DARK = {
+    # Surfaces
+    "CANVAS": "#1c1c1e",                # Card surface (secondarySystemBackground)
+    "PARCHMENT": "#000000",             # App canvas — pure black
+    "PEARL": "#2c2c2e",                 # Elevated card surface
+    "INK": "#f5f5f7",                   # Primary text — white
+    "INK_MUTED_80": "#d1d1d6",
+    "INK_MUTED_48": "#8e8e93",
+    "BODY_MUTED": "#98989f",
+    "HAIRLINE": "#3a3a3c",              # Hairline borders on dark
+    "DIVIDER_SOFT": "#2c2c2e",
+    "PRIMARY": "#2997ff",               # Sky Link Blue — interactive on dark
+    "PRIMARY_FOCUS": "#4aa8ff",
+    "PRIMARY_ON_DARK": "#2997ff",
+    "ON_PRIMARY": "#ffffff",
+    "ON_DARK": "#ffffff",
+    "BLACK": "#000000",
+    "TILE_1": "#272729",
+    "TILE_2": "#2a2a2c",
+    "TILE_3": "#252527",
+    "CHIP": "#48484a",
+
+    # Semantic
+    "SUCCESS": "#30d158",
+    "WARNING": "#ff9f0a",
+    "ERROR": "#ff453a",
+
+    # Tints
+    "TINT_ERROR": "#ff453a33",
+    "TINT_PRIMARY": "#2997ff33",
+
+    # Grays (dark label ladder)
+    "GRAY_1": "#f5f5f7",
+    "GRAY_2": "#d1d1d6",
+    "GRAY_3": "#8e8e93",
+    "GRAY_4": "#636366",
+    "GRAY_5": "#48484a",
+
+    # Dark chrome (stable)
+    "CHROME": "#1c1c1e",
+    "CHROME_ACTIVE": "#2c2c2e",
+
+    # Semantic lowercase aliases (for Theme.color("success") etc.)
+    "primary": "#2997ff",
+    "primary_light": "#4aa8ff",
+    "primary_dark": "#0a84ff",
+    "success": "#30d158",
+    "warning": "#ff9f0a",
+    "error": "#ff453a",
+    "background": "#000000",
+    "surface": "#1c1c1e",
+    "surface_light": "#2c2c2e",
+    "surface_hover": "#2c2c2e",
+    "border": "#3a3a3c",
+    "border_focus": "#4aa8ff",
+    "text_primary": "#f5f5f7",
+    "text_secondary": "#d1d1d6",
+    "text_muted": "#8e8e93",
+    "text_disabled": "#636366",
+}
+
+# ─── Light palette (all tokens + legacy aliases) ─────────────────────
 
 LIGHT = {
-    "background": PARCHMENT,            # App canvas — parchment
-    "surface": CANVAS,                  # Card / panel surface — white
-    "surface_light": PEARL,             # Elevated surface — pearl
-    "surface_hover": DIVIDER_SOFT,      # Hover state
-    "border": HAIRLINE,                 # Hairline borders
-    "border_focus": PRIMARY_FOCUS,      # Focus border
+    "CANVAS": CANVAS,
+    "PARCHMENT": PARCHMENT,
+    "PEARL": PEARL,
+    "INK": INK,
+    "INK_MUTED_80": INK_MUTED_80,
+    "INK_MUTED_48": INK_MUTED_48,
+    "BODY_MUTED": BODY_MUTED,
+    "HAIRLINE": HAIRLINE,
+    "DIVIDER_SOFT": DIVIDER_SOFT,
+    "PRIMARY": PRIMARY,
+    "PRIMARY_FOCUS": PRIMARY_FOCUS,
+    "PRIMARY_ON_DARK": PRIMARY_ON_DARK,
+    "ON_PRIMARY": ON_PRIMARY,
+    "ON_DARK": ON_DARK,
+    "BLACK": BLACK,
+    "TILE_1": TILE_1,
+    "TILE_2": TILE_2,
+    "TILE_3": TILE_3,
+    "CHIP": CHIP,
+    "SUCCESS": SUCCESS,
+    "WARNING": WARNING,
+    "ERROR": ERROR,
+    "TINT_ERROR": TINT_ERROR,
+    "TINT_PRIMARY": TINT_PRIMARY,
+    "GRAY_1": GRAY_1,
+    "GRAY_2": GRAY_2,
+    "GRAY_3": GRAY_3,
+    "GRAY_4": GRAY_4,
+    "GRAY_5": GRAY_5,
+    "CHROME": CHROME,
+    "CHROME_ACTIVE": CHROME_ACTIVE,
 
-    # Text
-    "text_primary": INK,                # Primary text — near-black
-    "text_secondary": GRAY_2,           # Secondary text
-    "text_muted": GRAY_3,               # Muted text — metadata
-    "text_disabled": GRAY_4,            # Disabled text
-
-    # Priority colors (task categorization — decoration only)
+    # Legacy semantic aliases
+    "background": PARCHMENT,
+    "surface": CANVAS,
+    "surface_light": PEARL,
+    "surface_hover": DIVIDER_SOFT,
+    "border": HAIRLINE,
+    "border_focus": PRIMARY_FOCUS,
+    "text_primary": INK,
+    "text_secondary": GRAY_2,
+    "text_muted": GRAY_3,
+    "text_disabled": GRAY_4,
     "priority_critical": "#ff3b30",
     "priority_high": "#ff9500",
     "priority_medium": "#ffcc00",
     "priority_low": GRAY_3,
-
-    # Accent sticker palette (decorative)
     "accent_sky": "#2997ff",
     "accent_purple": "#af52de",
     "accent_pink": "#ff2d55",
     "accent_orange": "#ff9500",
     "accent_teal": "#30b0c7",
-
-    # Semantic
-    "primary": PRIMARY,                 # Action Blue — the single accent
-    "primary_light": PRIMARY_FOCUS,     # Lighter blue — hover/focus
-    "primary_dark": "#0055b3",          # Darker blue — pressed states
+    "primary": PRIMARY,
+    "primary_light": PRIMARY_FOCUS,
+    "primary_dark": "#0055b3",
     "success": SUCCESS,
     "warning": WARNING,
     "error": ERROR,
@@ -106,7 +205,7 @@ LIGHT = {
     "accent_blue": (0.0, 0.4, 0.8, 1),          # #0066cc
     "accent_green": (0.204, 0.780, 0.349, 1),   # #34c759
     "accent_red": (1.0, 0.231, 0.188, 1),       # #ff3b30
-    "text_white": (0.114, 0.114, 0.122, 1),     # #1d1d1f ink (was white on dark)
+    "text_white": (0.114, 0.114, 0.122, 1),     # #1d1d1f ink
     "text_dim": (0.431, 0.431, 0.451, 1),       # #6e6e73
     "text_muted_dim": (0.525, 0.525, 0.545, 1), # #86868b
 }
@@ -164,19 +263,22 @@ FONT_DISPLAY = "system-ui, -apple-system, sans-serif"
 FONT_TEXT = "system-ui, -apple-system, sans-serif"
 FONT_MONO = "Roboto Mono"
 
-# Text style factory helpers (SF Pro / system-ui substitute)
+
 def text_style(
     size: float,
     weight: ft.FontWeight = ft.FontWeight.W_400,
-    color: str = INK,
+    color: str | None = None,
     letter_spacing: float | None = None,
     family: str = FONT_TEXT,
 ) -> ft.TextStyle:
-    """Build a TextStyle following the design-doc type scale."""
+    """Build a TextStyle following the design-doc type scale.
+
+    ``color`` defaults to the active palette's ink.
+    """
     return ft.TextStyle(
         size=size,
         weight=weight,
-        color=color,
+        color=color if color is not None else Theme.INK,
         font_family=family,
         letter_spacing=letter_spacing,
     )
@@ -199,77 +301,202 @@ PRIORITY_RGBA = {
 }
 
 
+# ─── Theme (mode-aware) ───────────────────────────────────────────────
+
+_PALETTES: dict[str, dict] = {"light": LIGHT, "dark": DARK}
+
+
+class _ThemeMeta(type):
+    """Metaclass so ``Theme.<TOKEN>`` resolves from the active palette."""
+
+    def __getattr__(cls, name: str):
+        palette = Theme._active_palette()
+        if name in palette:
+            return palette[name]
+        raise AttributeError(f"{cls.__name__}.{name}")
+
+
+class Theme(metaclass=_ThemeMeta):
+    """Mode-aware theme constants and helpers.
+
+    Attribute access (``Theme.INK``) and ``Theme.color("success")`` both
+    resolve from the ACTIVE palette (light or dark). Call ``Theme.set_mode``
+    to switch palettes — rebuilt widgets pick up the new colors.
+    """
+
+    _mode: ClassVar[str] = "light"
+    dark: ClassVar[dict] = DARK          # full dark palette
+    light: ClassVar[dict] = LIGHT        # full light palette
+    spacing: ClassVar[dict[str, int]] = SPACING
+    radius: ClassVar[dict[str, int]] = RADIUS
+    heights: ClassVar[dict[str, int]] = HEIGHTS
+    priority_labels: ClassVar[dict[str, str]] = PRIORITY_LABELS
+    priority_rgba: ClassVar[dict[str, tuple]] = PRIORITY_RGBA
+
+    @classmethod
+    def set_mode(cls, mode: str) -> None:
+        """Switch the active palette ("light" or "dark")."""
+        cls._mode = "dark" if str(mode).lower() == "dark" else "light"
+
+    @classmethod
+    def mode(cls) -> str:
+        """Return the active mode name."""
+        return cls._mode
+
+    @classmethod
+    def _active_palette(cls) -> dict:
+        return _PALETTES[cls._mode]
+
+    @classmethod
+    def color(cls, name: str) -> str:
+        """Get a color hex value by name from the active palette."""
+        return cls._active_palette().get(name, "#000000")
+
+    @classmethod
+    def text(cls, name: str) -> str:
+        """Get a text color by name."""
+        return cls.color(f"text_{name}")
+
+    @classmethod
+    def to_rgba(cls, hex_color: str) -> tuple[float, float, float, float]:
+        """Convert a hex color string to an RGBA tuple (0.0-1.0)."""
+        hex_color = hex_color.lstrip("#")
+        if len(hex_color) == 6:
+            hex_color = f"{hex_color}ff"
+        r = int(hex_color[0:2], 16) / 255.0
+        g = int(hex_color[2:4], 16) / 255.0
+        b = int(hex_color[4:6], 16) / 255.0
+        a = int(hex_color[6:8], 16) / 255.0
+        return (r, g, b, a)
+
+    @classmethod
+    def to_flet_color(cls, hex_color: str) -> str:
+        """Convert hex color to flet color string, preserving alpha if present."""
+        if len(hex_color) in (7, 9) and hex_color[0] == "#":
+            return hex_color
+        return hex_color
+
+    @classmethod
+    def focus_rgba_str(cls) -> str:
+        return cls.color("primary")
+
+    @classmethod
+    def success_rgba_str(cls) -> str:
+        return cls.color("success")
+
+    @classmethod
+    def error_rgba_str(cls) -> str:
+        return cls.color("error")
+
+    @classmethod
+    def text_primary_str(cls) -> str:
+        return cls.color("text_primary")
+
+    @classmethod
+    def text_secondary_str(cls) -> str:
+        return cls.color("text_secondary")
+
+    @classmethod
+    def text_dim_str(cls) -> str:
+        return cls.color("text_muted")
+
+    @classmethod
+    def text_muted_str(cls) -> str:
+        return cls.color("text_muted")
+
+    @classmethod
+    def surface_str(cls) -> str:
+        return cls.color("surface")
+
+    @classmethod
+    def card_str(cls) -> str:
+        return cls.color("surface")
+
+    @classmethod
+    def card_alt_str(cls) -> str:
+        return cls.color("surface_light")
+
+    @classmethod
+    def bg_str(cls) -> str:
+        return cls.color("background")
+
+
+# Module-level convenience instance (legacy)
+theme = Theme()
+
+
 # ─── Flet Theme Builder ───────────────────────────────────────────────
 
 def build_flet_theme() -> ft.Theme:
-    """Build a Flet Theme matching the Apple-style light design system.
+    """Build a Flet Theme matching the ACTIVE Apple-style palette.
 
     Compatible with Flet 0.86+ — uses ft.Colors (uppercase) and avoids
     removed parameters like Theme.brightness and ColorScheme.background.
-    Light mode is set via page.theme_mode in app.py.
+    The page's theme_mode should be kept in sync via app.py.
     """
+    pal = Theme._active_palette()
     return ft.Theme(
         color_scheme_seed=ft.Colors.BLUE,
         color_scheme=ft.ColorScheme(
-            primary=PRIMARY,
-            on_primary=ON_PRIMARY,
-            secondary=PRIMARY_FOCUS,
-            surface=CANVAS,
-            on_surface=INK,
-            error=ERROR,
-            surface_tint=PRIMARY,
+            primary=pal["PRIMARY"],
+            on_primary=pal["ON_PRIMARY"],
+            secondary=pal["PRIMARY_FOCUS"],
+            surface=pal["CANVAS"],
+            on_surface=pal["INK"],
+            error=pal["ERROR"],
+            surface_tint=pal["PRIMARY"],
         ),
         text_theme=ft.TextTheme(
             headline_large=ft.TextStyle(
                 size=40,
                 weight=ft.FontWeight.W_600,
-                color=INK,
+                color=pal["INK"],
                 font_family=FONT_DISPLAY,
             ),
             headline_medium=ft.TextStyle(
                 size=28,
                 weight=ft.FontWeight.W_600,
-                color=INK,
+                color=pal["INK"],
                 font_family=FONT_DISPLAY,
             ),
             title_medium=ft.TextStyle(
                 size=17,
                 weight=ft.FontWeight.W_600,
-                color=INK,
+                color=pal["INK"],
                 font_family=FONT_TEXT,
             ),
             title_small=ft.TextStyle(
                 size=14,
                 weight=ft.FontWeight.W_600,
-                color=INK,
+                color=pal["INK"],
                 font_family=FONT_TEXT,
             ),
             body_medium=ft.TextStyle(
                 size=14,
-                color=INK,
+                color=pal["INK"],
                 font_family=FONT_TEXT,
             ),
             body_small=ft.TextStyle(
                 size=12,
-                color=GRAY_2,
+                color=pal["GRAY_2"],
                 font_family=FONT_TEXT,
             ),
             label_large=ft.TextStyle(
                 size=14,
                 weight=ft.FontWeight.W_600,
-                color=INK,
+                color=pal["INK"],
                 font_family=FONT_TEXT,
             ),
             label_medium=ft.TextStyle(
                 size=12,
                 weight=ft.FontWeight.W_600,
-                color=INK,
+                color=pal["INK"],
                 font_family=FONT_TEXT,
             ),
             label_small=ft.TextStyle(
                 size=10,
                 weight=ft.FontWeight.W_400,
-                color=GRAY_3,
+                color=pal["GRAY_3"],
                 font_family=FONT_TEXT,
             ),
         ),
@@ -298,98 +525,3 @@ def rgba_to_hex(r: float, g: float, b: float, a: float = 1.0) -> str:
 def rgba_str(r: float, g: float, b: float, a: float = 1.0) -> str:
     """Convert RGBA 0-1 float tuple to flet-compatible hex string."""
     return rgba_to_hex(r, g, b, a)
-
-
-# ─── Theme Constants ──────────────────────────────────────────────────
-
-
-class Theme:
-    """Theme constants and helpers for Leadership OS (Apple light system)."""
-
-    dark: ClassVar[dict[str, str]] = LIGHT  # kept for API compatibility
-    light: ClassVar[dict[str, str]] = LIGHT
-    spacing: ClassVar[dict[str, int]] = SPACING
-    radius: ClassVar[dict[str, int]] = RADIUS
-    heights: ClassVar[dict[str, int]] = HEIGHTS
-    priority_labels: ClassVar[dict[str, str]] = PRIORITY_LABELS
-    priority_rgba: ClassVar[dict[str, tuple]] = PRIORITY_RGBA
-
-    @classmethod
-    def color(cls, name: str) -> str:
-        """Get a color hex value by name."""
-        return cls.light.get(name, "#000000")
-
-    @classmethod
-    def text(cls, name: str) -> str:
-        """Get a text color by name."""
-        return cls.color(f"text_{name}")
-
-    @classmethod
-    def to_rgba(cls, hex_color: str) -> tuple[float, float, float, float]:
-        """Convert a hex color string to an RGBA tuple (0.0-1.0)."""
-        hex_color = hex_color.lstrip("#")
-        if len(hex_color) == 6:
-            hex_color = f"{hex_color}ff"
-        r = int(hex_color[0:2], 16) / 255.0
-        g = int(hex_color[2:4], 16) / 255.0
-        b = int(hex_color[4:6], 16) / 255.0
-        a = int(hex_color[6:8], 16) / 255.0
-        return (r, g, b, a)
-
-    @classmethod
-    def to_flet_color(cls, hex_color: str) -> str:
-        """Convert hex color to flet color string, preserving alpha if present."""
-        if len(hex_color) in (7, 9) and hex_color[0] == "#":
-            return hex_color
-        return hex_color
-
-    @classmethod
-    def focus_rgba_str(cls) -> str:
-        """Get focus/primary accent as hex string for Flet."""
-        return PRIMARY
-
-    @classmethod
-    def success_rgba_str(cls) -> str:
-        """Get success green as hex string for Flet."""
-        return SUCCESS
-
-    @classmethod
-    def error_rgba_str(cls) -> str:
-        """Get error red as hex string for Flet."""
-        return ERROR
-
-    @classmethod
-    def text_primary_str(cls) -> str:
-        return INK
-
-    @classmethod
-    def text_secondary_str(cls) -> str:
-        return GRAY_2
-
-    @classmethod
-    def text_dim_str(cls) -> str:
-        return GRAY_3
-
-    @classmethod
-    def text_muted_str(cls) -> str:
-        return GRAY_3
-
-    @classmethod
-    def surface_str(cls) -> str:
-        return CANVAS
-
-    @classmethod
-    def card_str(cls) -> str:
-        return CANVAS
-
-    @classmethod
-    def card_alt_str(cls) -> str:
-        return PEARL
-
-    @classmethod
-    def bg_str(cls) -> str:
-        return PARCHMENT
-
-
-# Module-level convenience instance
-theme = Theme()

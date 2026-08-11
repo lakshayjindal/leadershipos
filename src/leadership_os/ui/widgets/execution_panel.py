@@ -11,19 +11,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from leadership_os.ui.theme import (
-    GRAY_2,
-    GRAY_3,
-    GRAY_4,
-    GRAY_5,
-    HAIRLINE,
-    INK,
-    ON_PRIMARY,
-    PARCHMENT,
-    PEARL,
-    PRIMARY,
-    Theme,
-)
+from leadership_os.ui.theme import Theme
 
 # ─── Card helper ────────────────────────────────────────────────────
 
@@ -31,14 +19,14 @@ from leadership_os.ui.theme import (
 def _card(
     content: ft.Control,
     height: int | None = None,
-    padding: int = 14,
+    padding: int | ft.Padding = 14,
 ) -> ft.Container:
     """Wrap content in a consistent white utility card."""
     return ft.Container(
         height=height,
-        bgcolor=PEARL,
+        bgcolor=Theme.PEARL,
         border_radius=Theme.radius["lg"],
-        border=ft.Border.all(1, HAIRLINE),
+        border=ft.Border.all(1, Theme.HAIRLINE),
         padding=padding,
         content=content,
     )
@@ -51,7 +39,7 @@ def _stat_box(value: str, label: str, color: str, border_color: str) -> ft.Conta
     """Build a compact stat display."""
     return ft.Container(
         expand=True,
-        bgcolor=PARCHMENT,
+        bgcolor=Theme.PARCHMENT,
         border_radius=Theme.radius["sm"],
         border=ft.Border.all(1, border_color),
         padding=ft.Padding(0, 6, 0, 2),
@@ -102,7 +90,7 @@ def build_execution_panel(
     on_break = panel_state == "break"
 
     # Timer color
-    timer_color = Theme.color("success") if timer_running else GRAY_2
+    timer_color = Theme.color("success") if timer_running else Theme.GRAY_2
 
     # State label
     if timer_running:
@@ -113,11 +101,11 @@ def build_execution_panel(
         state_color = Theme.color("error")
     else:
         state_label = "IDLE"
-        state_color = GRAY_3
+        state_color = Theme.GRAY_3
 
     return ft.Container(
         width=panel_width,
-        bgcolor=PARCHMENT,
+        bgcolor=Theme.PARCHMENT,
         padding=12,
         content=ft.Column(
             spacing=8,
@@ -127,16 +115,16 @@ def build_execution_panel(
                     height=56 if has_task else 0,
                     opacity=1 if has_task else 0,
                     visible=has_task,
-                    bgcolor=PEARL,
+                    bgcolor=Theme.PEARL,
                     border_radius=Theme.radius["lg"],
-                    border=ft.Border.all(1, HAIRLINE),
+                    border=ft.Border.all(1, Theme.HAIRLINE),
                     padding=ft.Padding(14, 10, 14, 10),
                     content=ft.Column(
                         spacing=4,
                         controls=[
-                            ft.Text("CURRENT TASK", color=GRAY_3, size=8, weight=ft.FontWeight.W_700),
-                            ft.Text(current_task_title, color=INK, size=15, weight=ft.FontWeight.W_700),
-                            ft.Text(current_task_priority, color=GRAY_2, size=10),
+                            ft.Text("CURRENT TASK", color=Theme.GRAY_3, size=8, weight=ft.FontWeight.W_700),
+                            ft.Text(current_task_title, color=Theme.INK, size=15, weight=ft.FontWeight.W_700),
+                            ft.Text(current_task_priority, color=Theme.GRAY_2, size=10),
                         ],
                     ),
                 ),
@@ -146,15 +134,15 @@ def build_execution_panel(
                     height=56 if not has_task else 0,
                     opacity=1 if not has_task else 0,
                     visible=not has_task,
-                    bgcolor=PEARL,
+                    bgcolor=Theme.PEARL,
                     border_radius=Theme.radius["lg"],
-                    border=ft.Border.all(1, HAIRLINE),
+                    border=ft.Border.all(1, Theme.HAIRLINE),
                     padding=ft.Padding(14, 14, 14, 14),
                     content=ft.Column(
                         spacing=2,
                         controls=[
-                            ft.Text("No active task", color=GRAY_3, size=13),
-                            ft.Text("Start one from Today's Plan", color=GRAY_4, size=10),
+                            ft.Text("No active task", color=Theme.GRAY_3, size=13),
+                            ft.Text("Start one from Today's Plan", color=Theme.GRAY_4, size=10),
                         ],
                     ),
                 ),
@@ -191,7 +179,7 @@ def build_execution_panel(
                                 f"{break_type_label}  ·  {break_elapsed}" if on_break and break_type_label else (
                                     f"Elapsed {session_elapsed}  ·  Remain {session_estimated}"
                                 ),
-                                color=Theme.color("error") if on_break else GRAY_3,
+                                color=Theme.color("error") if on_break else Theme.GRAY_3,
                                 size=9,
                             ),
                         ],
@@ -200,16 +188,16 @@ def build_execution_panel(
 
                 # ── CARD: Progress ───────────────────────────────
                 _card(
-                    height=96,
-                    padding=14,
+                    height=104,
+                    padding=ft.Padding(14, 12, 14, 14),
                     content=ft.Column(
                         spacing=6,
                         controls=[
                             # Header row
                             ft.Row(
                                 controls=[
-                                    ft.Text("TODAY'S PROGRESS", color=GRAY_3, size=8, weight=ft.FontWeight.W_700),
-                                    ft.Text(progress_status, color=GRAY_2, size=10),
+                                    ft.Text("TODAY'S PROGRESS", color=Theme.GRAY_3, size=8, weight=ft.FontWeight.W_700),
+                                    ft.Text(progress_status, color=Theme.GRAY_2, size=10),
                                 ],
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             ),
@@ -217,11 +205,11 @@ def build_execution_panel(
                             ft.Container(
                                 height=4,
                                 border_radius=2,
-                                bgcolor=GRAY_5,
+                                bgcolor=Theme.GRAY_5,
                                 content=ft.Container(
                                     height=4,
                                     border_radius=2,
-                                    bgcolor=Theme.color("success") if total_count > 0 and completed_count >= total_count else PRIMARY,
+                                    bgcolor=Theme.color("success") if total_count > 0 and completed_count >= total_count else Theme.PRIMARY,
                                     width=max(4, panel_width * 0.75 * min(1.0, completed_count / max(1, total_count))),
                                 ),
                             ),
@@ -229,11 +217,13 @@ def build_execution_panel(
                             ft.Row(
                                 spacing=6,
                                 controls=[
-                                    _stat_box(str(int(completed_count)), "Done", Theme.color("success"), "#34c75940"),
-                                    _stat_box(str(int(max(0, total_count - completed_count))), "Left", PRIMARY, "#0066cc40"),
-                                    _stat_box(focus_time_display, "Focus", GRAY_2, "#6e6e7340"),
+                                    _stat_box(str(int(completed_count)), "Done", Theme.color("success"), Theme.color("success") + "40"),
+                                    _stat_box(str(int(max(0, total_count - completed_count))), "Left", Theme.PRIMARY, Theme.PRIMARY + "40"),
+                                    _stat_box(focus_time_display, "Focus", Theme.GRAY_2, Theme.GRAY_2 + "40"),
                                 ],
                             ),
+                            # Bottom gap so the stat boxes sit above the card edge
+                            ft.Container(height=4),
                         ],
                     ),
                 ),
@@ -245,10 +235,10 @@ def build_execution_panel(
                     content=ft.Column(
                         spacing=2,
                         controls=[
-                            ft.Text("NEXT UP", color=GRAY_3, size=8, weight=ft.FontWeight.W_700),
+                            ft.Text("NEXT UP", color=Theme.GRAY_3, size=8, weight=ft.FontWeight.W_700),
                             ft.Text(
                                 next_task_title if next_task_title else "—",
-                                color=GRAY_2 if next_task_title else GRAY_5,
+                                color=Theme.GRAY_2 if next_task_title else Theme.GRAY_5,
                                 size=13,
                                 italic=not next_task_title,
                             ),
@@ -266,16 +256,16 @@ def build_execution_panel(
                     content=ft.Column(
                         spacing=4,
                         controls=[
-                            ft.Text("ACTIONS", color=GRAY_3, size=8, weight=ft.FontWeight.W_700),
+                            ft.Text("ACTIONS", color=Theme.GRAY_3, size=8, weight=ft.FontWeight.W_700),
                             ft.Container(height=2),
 
-                            # Complete — PRIMARY (blue pill)
+                            # Complete — Theme.PRIMARY (blue pill)
                             ft.Button(
-                                content=ft.Text("✓  Complete Task", color=ON_PRIMARY),
+                                content=ft.Text("✓  Complete Task", color=Theme.ON_PRIMARY),
                                 disabled=not has_task,
                                 on_click=lambda _: on_complete(),
                                 height=40,
-                                bgcolor=PRIMARY if has_task else "#0066cc40",
+                                bgcolor=Theme.PRIMARY if has_task else Theme.PRIMARY + "40",
                                 style=ft.ButtonStyle(
                                     shape=ft.RoundedRectangleBorder(radius=Theme.radius["pill"]),
                                 ),
@@ -288,8 +278,8 @@ def build_execution_panel(
                                 on_click=lambda _: on_pause(),
                                 height=34,
                                 style=ft.ButtonStyle(
-                                    color=GRAY_2 if has_task else "#6e6e7340",
-                                    bgcolor=PARCHMENT if has_task else "#f5f5f720",
+                                    color=Theme.GRAY_2 if has_task else Theme.GRAY_2 + "40",
+                                    bgcolor=Theme.PARCHMENT if has_task else Theme.PARCHMENT + "20",
                                     shape=ft.RoundedRectangleBorder(radius=Theme.radius["sm"]),
                                 ),
                             ),
@@ -302,18 +292,18 @@ def build_execution_panel(
                                 on_click=lambda _: on_start_break(),
                                 height=30,
                                 style=ft.ButtonStyle(
-                                    color="#0066cc" if has_task else "#0066cc40",
-                                    bgcolor="#0066cc14" if has_task else "#0066cc0a",
+                                    color=Theme.PRIMARY if has_task else Theme.PRIMARY + "40",
+                                    bgcolor=Theme.TINT_PRIMARY if has_task else Theme.PRIMARY + "0a",
                                     shape=ft.RoundedRectangleBorder(radius=Theme.radius["sm"]),
                                 ),
                             ),
 
                             # Separator — only between the two button groups
-                            ft.Divider(height=1, color="#f0f0f0", visible=on_break),
+                            ft.Divider(height=1, color=Theme.DIVIDER_SOFT, visible=on_break),
 
-                            # Resume — BREAK PRIMARY (only while on break)
+                            # Resume — BREAK Theme.PRIMARY (only while on break)
                             ft.Button(
-                                content=ft.Text("▶  Resume Work", color=ON_PRIMARY),
+                                content=ft.Text("▶  Resume Work", color=Theme.ON_PRIMARY),
                                 visible=on_break,
                                 on_click=lambda _: on_resume(),
                                 height=40,
@@ -331,7 +321,7 @@ def build_execution_panel(
                                 height=30,
                                 style=ft.ButtonStyle(
                                     color=Theme.color("error"),
-                                    bgcolor="#ff3b3014",
+                                    bgcolor=Theme.color("error") + "14",
                                     shape=ft.RoundedRectangleBorder(radius=Theme.radius["sm"]),
                                 ),
                             ),

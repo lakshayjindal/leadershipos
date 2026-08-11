@@ -19,17 +19,7 @@ from typing import Any
 import flet as ft
 
 from leadership_os.core.task_engine import TaskEngine
-from leadership_os.ui.theme import (
-    CANVAS,
-    DIVIDER_SOFT,
-    GRAY_3,
-    GRAY_4,
-    HAIRLINE,
-    INK,
-    PARCHMENT,
-    PRIMARY,
-    Theme,
-)
+from leadership_os.ui.theme import Theme
 
 logger = logging.getLogger(__name__)
 
@@ -114,11 +104,11 @@ def build_command_palette(
         title_spans: list | None = None,
     ) -> ft.Container:
         """Build a single result row for the palette."""
-        bg = PARCHMENT if highlight else "transparent"
+        bg = Theme.PARCHMENT if highlight else "transparent"
         title_control = (
             ft.Text(spans=title_spans, size=13)
             if title_spans
-            else ft.Text(title, color=INK, size=13, weight=ft.FontWeight.W_500)
+            else ft.Text(title, color=Theme.INK, size=13, weight=ft.FontWeight.W_500)
         )
         return ft.Container(
             height=40,
@@ -130,13 +120,13 @@ def build_command_palette(
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Text(icon, size=14, color=GRAY_3),
+                    ft.Text(icon, size=14, color=Theme.GRAY_3),
                     ft.Column(
                         spacing=0,
                         expand=True,
                         controls=[
                             title_control,
-                            ft.Text(subtitle, color=GRAY_4, size=10) if subtitle else ft.Container(),
+                            ft.Text(subtitle, color=Theme.GRAY_4, size=10) if subtitle else ft.Container(),
                         ],
                     ),
                 ],
@@ -147,7 +137,7 @@ def build_command_palette(
         """Build a section header row."""
         return ft.Container(
             padding=ft.Padding(8, top_pad, 8, 0),
-            content=ft.Text(text, color=GRAY_3, size=9, weight=ft.FontWeight.W_700),
+            content=ft.Text(text, color=Theme.GRAY_3, size=9, weight=ft.FontWeight.W_700),
         )
 
     def _highlight_spans(text: str, query: str) -> list:
@@ -159,7 +149,7 @@ def build_command_palette(
             spans.append(ft.TextSpan(
                 segment,
                 style=ft.TextStyle(
-                    color=PRIMARY if is_match else INK,
+                    color=Theme.PRIMARY if is_match else Theme.INK,
                     weight=ft.FontWeight.W_700 if is_match else ft.FontWeight.W_500,
                 ),
             ))
@@ -173,7 +163,7 @@ def build_command_palette(
         """Update the selected row's background without rebuilding the list."""
         selected = selected_index_ref[0]
         for i, container in enumerate(row_containers):
-            container.bgcolor = PARCHMENT if i == selected else "transparent"
+            container.bgcolor = Theme.PARCHMENT if i == selected else "transparent"
         if results_ref.current:
             results_ref.current.update()
 
@@ -301,7 +291,7 @@ def build_command_palette(
             results.append(
                 ft.Container(
                     padding=ft.Padding(12, 20, 12, 20),
-                    content=ft.Text("No results found", color=GRAY_4, size=12),
+                    content=ft.Text("No results found", color=Theme.GRAY_4, size=12),
                 )
             )
 
@@ -369,9 +359,9 @@ def build_command_palette(
 
     palette_card = ft.Container(
         width=560,
-        bgcolor=CANVAS,
+        bgcolor=Theme.CANVAS,
         border_radius=Theme.radius["lg"],
-        border=ft.Border.all(1, HAIRLINE),
+        border=ft.Border.all(1, Theme.HAIRLINE),
         padding=0,
         content=ft.Column(
             spacing=0,
@@ -379,15 +369,15 @@ def build_command_palette(
                 # Search input
                 ft.Container(
                     padding=ft.Padding(16, 14, 16, 10),
-                    border=ft.Border(bottom=ft.BorderSide(1, DIVIDER_SOFT)),
+                    border=ft.Border(bottom=ft.BorderSide(1, Theme.DIVIDER_SOFT)),
                     content=ft.TextField(
                         ref=input_ref,
                         hint_text="Search tasks, journals, sessions, commands...",
                         border=ft.InputBorder.NONE,
                         autofocus=True,
                         text_size=16,
-                        color=INK,
-                        hint_style=ft.TextStyle(color=GRAY_4, size=16),
+                        color=Theme.INK,
+                        hint_style=ft.TextStyle(color=Theme.GRAY_4, size=16),
                         on_change=_on_input_change,
                     ),
                 ),
@@ -407,9 +397,9 @@ def build_command_palette(
                     content=ft.Row(
                         spacing=14,
                         controls=[
-                            ft.Text("↑↓ Navigate", color=GRAY_4, size=10),
-                            ft.Text("↵ Select", color=GRAY_4, size=10),
-                            ft.Text("Esc Close", color=GRAY_4, size=10),
+                            ft.Text("↑↓ Navigate", color=Theme.GRAY_4, size=10),
+                            ft.Text("↵ Select", color=Theme.GRAY_4, size=10),
+                            ft.Text("Esc Close", color=Theme.GRAY_4, size=10),
                         ],
                     ),
                 ),

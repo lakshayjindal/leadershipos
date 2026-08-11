@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import flet as ft
 
-
 # ─── Helper: walk Flet widget tree ───────────────────────────────────
 
 
@@ -259,6 +258,7 @@ class TestLightTheme:
     def test_run_uses_light_mode(self):
         """run() should set ThemeMode.LIGHT on the page."""
         import flet as ft
+
         from leadership_os.app import LeadershipOSApp
 
         app = LeadershipOSApp()
@@ -309,3 +309,210 @@ class TestEndDayButton:
         # even without initialized engines.
         handler(None)
         assert app._nav_view == "review"
+
+
+# ─── Test 6: Sidebar highlight follows navigation ───────────────────
+
+
+def _nav_item_bg(sidebar, label: str):
+    """Return the bgcolor of the sidebar nav item with the given label.
+
+    Nav items are Containers whose content Row holds a Text with the label.
+    """
+    for parent in _walk(sidebar):
+        if (
+            isinstance(parent, ft.Container)
+            and isinstance(parent.content, ft.Row)
+            and any(
+                isinstance(t, ft.Text) and t.value == label
+                for t in _walk(parent.content)
+            )
+        ):
+            return parent.bgcolor
+    return None
+
+
+class TestSidebarHighlight:
+    """The active nav item must track the current view (bug: stayed on Today)."""
+
+    def _sidebar(self, active_view: str):
+        from leadership_os.ui.widgets.sidebar import build_sidebar
+
+        return build_sidebar(
+            app_state="planning",
+            focus_time=0,
+            completed_count=0,
+            total_count=0,
+            status_text="Ready",
+            active_view=active_view,
+            today_callback=lambda: None,
+            history_callback=lambda: None,
+            settings_callback=lambda: None,
+        )
+
+    def test_today_highlighted_by_default(self):
+        from leadership_os.ui.theme import Theme
+
+        sidebar = self._sidebar("today")
+        assert _nav_item_bg(sidebar, "Today") == Theme.PARCHMENT
+        assert _nav_item_bg(sidebar, "History") == "transparent"
+        assert _nav_item_bg(sidebar, "Settings") == "transparent"
+
+    def test_history_highlighted(self):
+        from leadership_os.ui.theme import Theme
+
+        sidebar = self._sidebar("history")
+        assert _nav_item_bg(sidebar, "History") == Theme.PARCHMENT
+        assert _nav_item_bg(sidebar, "Today") == "transparent"
+
+    def test_settings_highlighted(self):
+        from leadership_os.ui.theme import Theme
+
+        sidebar = self._sidebar("settings")
+        assert _nav_item_bg(sidebar, "Settings") == Theme.PARCHMENT
+        assert _nav_item_bg(sidebar, "Today") == "transparent"
+
+    def test_today_context_views_keep_today_highlighted(self):
+        from leadership_os.ui.theme import Theme
+
+        for view in ("review", "carry_forward", "break_dialog"):
+            sidebar = self._sidebar(view)
+            assert _nav_item_bg(sidebar, "Today") == Theme.PARCHMENT, view
+            assert _nav_item_bg(sidebar, "History") == "transparent", view
+            assert _nav_item_bg(sidebar, "Settings") == "transparent", view
+
+    def test_navigation_methods_set_nav_view(self):
+        """switch_to_* must update _nav_view (which drives the highlight)."""
+        from leadership_os.app import LeadershipOSApp
+
+        app = LeadershipOSApp()
+        app.switch_to_history()
+        assert app._nav_view == "history"
+        app.switch_to_settings()
+        assert app._nav_view == "settings"
+        app.switch_to_today()
+        assert app._nav_view == "today"
+
+
+# ─── Test 7: Dark mode switch ───────────────────────────────────────
+
+
+class TestDarkMode:
+    """Theme.set_mode should switch the active palette for all tokens."""
+
+    def test_set_mode_dark(self):
+        from leadership_os.ui import theme as theme_mod
+
+        theme_mod.Theme.set_mode("dark")
+        try:
+            assert theme_mod.Theme.INK == "#f5f5f7"
+            assert theme_mod.Theme.PARCHMENT == "#000000"
+            assert theme_mod.Theme.PEARL == "#2c2c2e"
+            assert theme_mod.Theme.color("primary") == "#2997ff"
+            assert theme_mod.Theme.color("success") == "#30d158"
+        finally:
+            theme_mod.Theme.set_mode("light")
+
+    def test_set_mode_light(self):
+        from leadership_os.ui import theme as theme_mod
+
+        theme_mod.Theme.set_mode("light")
+        assert theme_mod.Theme.INK == "#1d1d1f"
+        assert theme_mod.Theme.PARCHMENT == "#f5f5f7"
+        assert theme_mod.Theme.color("primary") == "#0066cc"
+
+    def test_unknown_mode_defaults_to_light(self):
+        from leadership_os.ui import theme as theme_mod
+
+        theme_mod.Theme.set_mode("system")
+        assert theme_mod.Theme.mode() == "light"
+
+    def test_config_default_is_light(self):
+        from leadership_os.config.defaults import DEFAULTS
+
+        assert DEFAULTS["ui"]["theme"] == "light"
+
+    def test_resolve_theme_mode(self):
+        import flet as ft
+
+        from leadership_os.app import LeadershipOSApp
+
+        app = LeadershipOSApp()
+
+        class FakeConfig:
+            def get(self, *a, **k):
+                return "dark"
+
+        app.config = FakeConfig()
+        assert app._resolve_theme_mode() == ft.ThemeMode.DARK
+
+
+# ─── Test 8: Today's Progress card bottom gap ───────────────────────
+
+
+class TestProgressCardPadding:
+    """The Today's Progress card must have a bottom gap below the stat boxes."""
+
+    def _build(self):
+        from leadership_os.ui.widgets.execution_panel import build_execution_panel
+
+        return build_execution_panel(
+            current_task_title="Test Task",
+            current_task_priority="HIGH",
+            timer_display="00:05:30",
+            timer_running=False,
+            panel_state="idle",
+            session_elapsed="00:00",
+            session_estimated="--:--",
+            completed_count=3,
+            total_count=5,
+            progress_status="2 remaining",
+            focus_time_display="1h 30m",
+            next_task_title="Next",
+        )
+
+    def test_progress_card_has_bottom_gap(self):
+        panel = self._build()
+
+        # Find the progress card: a Container with an explicit height whose
+        # content Column contains the "TODAY'S PROGRESS" header text.
+        progress_card = None
+        for c in _walk(panel):
+            if (
+                isinstance(c, ft.Container)
+                and c.height is not None
+                and isinstance(c.content, ft.Column)
+            ):
+                col = c.content
+                if any(
+                    isinstance(t, ft.Text) and t.value == "TODAY'S PROGRESS"
+                    for t in _walk(col)
+                ):
+                    progress_card = c
+                    break
+
+        assert progress_card is not None, "Progress card should exist"
+        # Height increased so the stat boxes sit above the card edge
+        assert progress_card.height >= 100
+        # The column ends with a spacer to create the bottom gap
+        controls = progress_card.content.controls
+        assert isinstance(controls[-1], ft.Container), "Column should end with a bottom spacer"
+        assert controls[-1].height == 4
+
+    def test_progress_card_has_bottom_padding(self):
+        panel = self._build()
+        for c in _walk(panel):
+            if (
+                isinstance(c, ft.Container)
+                and c.height is not None
+                and isinstance(c.content, ft.Column)
+            ):
+                col = c.content
+                if any(
+                    isinstance(t, ft.Text) and t.value == "TODAY'S PROGRESS"
+                    for t in _walk(col)
+                ):
+                    padding = c.padding
+                    assert padding is not None
+                    bottom = padding.bottom if hasattr(padding, "bottom") else padding
+                    assert bottom >= 14, "Card should have >=14px bottom padding"
