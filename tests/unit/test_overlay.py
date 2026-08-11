@@ -158,6 +158,86 @@ class TestOverlayWindow:
 
         assert results == ["show", "pause", "complete", "break", "resume", "end"]
 
+    def test_select_task_callback_wired(self):
+        """on_select_task should receive the clicked task id."""
+        from leadership_os.ui.overlay import OverlayWindow
+
+        received: list[str] = []
+
+        overlay = OverlayWindow(
+            on_show_main=lambda: None,
+            on_pause=lambda: None,
+            on_complete=lambda: None,
+            on_start_break=lambda: None,
+            on_resume=lambda: None,
+            on_end_break=lambda: None,
+            on_select_task=lambda tid: received.append(tid),
+        )
+
+        # Simulate clicking a pending-task row
+        overlay._callbacks["select_task"]("task-123")
+        assert received == ["task-123"]
+
+    def test_select_task_optional(self):
+        """on_select_task is optional — a no-op default is used when omitted."""
+        from leadership_os.ui.overlay import OverlayWindow
+
+        overlay = OverlayWindow(
+            on_show_main=lambda: None,
+            on_pause=lambda: None,
+            on_complete=lambda: None,
+            on_start_break=lambda: None,
+            on_resume=lambda: None,
+            on_end_break=lambda: None,
+        )
+
+        # Should not raise
+        overlay._callbacks["select_task"]("task-999")
+
+    def test_pending_tasks_stored_from_update(self):
+        """send_update data with pending_tasks should be stored and trimmed."""
+        from leadership_os.ui.overlay import OverlayWindow, OVERLAY_MAX_PENDING
+
+        overlay = OverlayWindow(
+            on_show_main=lambda: None,
+            on_pause=lambda: None,
+            on_complete=lambda: None,
+            on_start_break=lambda: None,
+            on_resume=lambda: None,
+            on_end_break=lambda: None,
+            on_select_task=lambda tid: None,
+        )
+
+        # Simulate _apply_update parsing pending tasks (no display needed)
+        overlay._apply_update({
+            "pending_tasks": [
+                {"id": f"t{i}", "title": f"Task {i}"} for i in range(OVERLAY_MAX_PENDING + 3)
+            ],
+        })
+
+        assert len(overlay._pending_tasks) == OVERLAY_MAX_PENDING
+        assert overlay._pending_tasks[0]["id"] == "t0"
+
+    def test_pending_tasks_ignore_invalid(self):
+        """Entries without an id should be filtered out."""
+        from leadership_os.ui.overlay import OverlayWindow
+
+        overlay = OverlayWindow(
+            on_show_main=lambda: None,
+            on_pause=lambda: None,
+            on_complete=lambda: None,
+            on_start_break=lambda: None,
+            on_resume=lambda: None,
+            on_end_break=lambda: None,
+        )
+
+        overlay._apply_update({
+            "pending_tasks": [{"title": "No id"}, {"id": "t1", "title": "Valid"}],
+        })
+
+        assert len(overlay._pending_tasks) == 1
+        assert overlay._pending_tasks[0]["id"] == "t1"
+
     @pytest.mark.skipif(not _HAS_DISPLAY, reason="No display available")
     def test_start_and_stop_with_display(self):
         """Integration test: start overlay, send updates, stop."""

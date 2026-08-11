@@ -12,6 +12,7 @@ Features:
 - Draggable (click and drag anywhere on the window)
 - Click to show/hide the main app window
 - Right-click context menu: Pause, Complete, Start Break, Resume, End Break
+- Clickable "Up Next" task list — start a pending task directly from the overlay
 - Updates via thread-safe queue from the main Flet app
 - Remembers position across restarts
 """
@@ -38,6 +39,8 @@ except ModuleNotFoundError:
 
 OVERLAY_WIDTH = 320
 OVERLAY_HEIGHT = 180
+OVERLAY_ROW_HEIGHT = 22  # Height of each pending-task row
+OVERLAY_MAX_PENDING = 4  # Max pending tasks shown on the overlay
 DEFAULT_OPACITY = 0.85
 
 # Dark theme colors
@@ -72,6 +75,7 @@ class OverlayWindow:
         on_start_break: Callable[[], None],
         on_resume: Callable[[], None],
         on_end_break: Callable[[], None],
+        on_select_task: Callable[[str], None] | None = None,
         config: dict[str, Any] | None = None,
     ) -> None:
         """
@@ -82,6 +86,8 @@ class OverlayWindow:
             on_start_break: Called when "Start Break" is selected.
             on_resume: Called when "Resume Work" is selected.
             on_end_break: Called when "End Break" is selected.
+            on_select_task: Optional callable accepting a task id — invoked when
+                the user clicks a pending task in the "Up Next" list.
             config: Optional config dict with overlay_opacity, overlay_position_x/y.
         """
         self._callbacks = {
@@ -91,6 +97,7 @@ class OverlayWindow:
             "start_break": on_start_break,
             "resume": on_resume,
             "end_break": on_end_break,
+            "select_task": on_select_task or (lambda _task_id: None),
         }
 
         # Config
@@ -118,6 +125,7 @@ class OverlayWindow:
             "priority": "",
             "next_task": "",
         }
+        self._pending_tasks: list[dict[str, str]] = []  # [{id, title}, ...]
 
     # ─── Public API ──────────────────────────────────────────────────
 
@@ -201,7 +209,7 @@ class OverlayWindow:
         self._root.configure(bg=BG_COLOR)
         self._root.geometry(f"{OVERLAY_WIDTH}x{OVERLAY_HEIGHT}")
 
-        frame = tk.Frame(self._root, bg=BG_COLOR, padx=14, pady=12)
+        frame = tk.Frame(self._root, bg=BG_COLOR, padx=14, pady=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
         # Row 1: State dot + label + priority
@@ -243,21 +251,22 @@ class OverlayWindow:
         )
         self._timer_label.pack()
 
-        # Row 4: Next task
+        # Row 4: Up Next — clickable pending task list
         tk.Frame(frame, bg=BG_COLOR, height=8).pack()
-        next_frame = tk.Frame(frame, bg=BG_COLOR)
-        next_frame.pack(fill=tk.X)
+        upnext_header = tk.Frame(frame, bg=BG_COLOR)
+        upnext_header.pack(fill=tk.X)
         tk.Label(
-            next_frame, text="Next: ", font=("Inter", 9),
+            upnext_header, text="UP NEXT", font=("Inter", 8, "bold"),
             fg=TEXT_MUTED, bg=BG_COLOR,
         ).pack(side=tk.LEFT)
-        self._next_label = tk.Label(
-            next_frame, text="—",
-            font=("Inter", 9),
+        self._upnext_tip = tk.Label(
+            upnext_header, text="click to start", font=("Inter", 8),
             fg=TEXT_MUTED, bg=BG_COLOR,
-            anchor="w",
         )
-        self._next_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self._upnext_tip.pack(side=tk.RIGHT)
+
+        self._pending_frame = tk.Frame(frame, bg=BG_COLOR)
+        self._pending_frame.pack(fill=tk.X)
 
     def _position_window(self) -> None:
         """Position the overlay on screen based on config."""
@@ -313,8 +322,74 @@ class OverlayWindow:
             self._state_label_w.configure(text=data["state_label"])
         if "priority" in data:
             self._priority_label_w.configure(text=data["priority"])
-        if "next_task" in data:
-            self._next_label.configure(text=data["next_task"] or "—")
+        if "pending_tasks" in data:
+            new_list = [
+                {"id": str(t.get("id", "")), "title": str(t.get("title", ""))}
+                for t in data["pending_tasks"]
+                if isinstance(t, dict) and t.get("id")
+            ][:OVERLAY_MAX_PENDING]
+            # Only re-render when the list actually changed (avoids flicker
+            # from the 1-second tick loop rebuilding rows every tick).
+            if new_list != self._pending_tasks:
+                self._pending_tasks = new_list
+                self._render_pending_tasks()
+
+    def _render_pending_tasks(self) -> None:
+        """Render the clickable 'Up Next' task list and resize to fit."""
+        if self._root is None or self._pending_frame is None:
+            return
+
+        # Clear existing rows
+        for child in self._pending_frame.winfo_children():
+            child.destroy()
+
+        tasks = self._pending_tasks
+        if not tasks:
+            self._upnext_tip.configure(text="")
+            label = tk.Label(
+                self._pending_frame, text="No pending tasks",
+                font=("Inter", 9), fg=TEXT_MUTED, bg=BG_COLOR, anchor="w",
+            )
+            label.pack(fill=tk.X)
+        else:
+            self._upnext_tip.configure(text="click to start")
+            for task in tasks:
+                self._add_pending_row(task)
+
+        # Resize window to fit the rows (empty state gets one row of room)
+        extra = (max(1, len(tasks))) * OVERLAY_ROW_HEIGHT
+        new_height = OVERLAY_HEIGHT + extra
+        self._root.geometry(f"{OVERLAY_WIDTH}x{new_height}")
+
+    def _add_pending_row(self, task: dict[str, str]) -> None:
+        """Add a single clickable pending-task row with hover styling."""
+        if self._pending_frame is None:
+            return
+
+        task_id = task["id"]
+        title = task["title"]
+
+        row = tk.Label(
+            self._pending_frame,
+            text=f"  ›  {title}",
+            font=("Inter", 9),
+            fg=TEXT_SECONDARY, bg=BG_COLOR,
+            anchor="w", cursor="hand2",
+        )
+        row.pack(fill=tk.X, pady=1)
+
+        def _on_click(_event=None):
+            self._callbacks["select_task"](task_id)
+
+        def _on_enter(_event=None):
+            row.configure(bg="#1E1E3A", fg=TEXT_PRIMARY)
+
+        def _on_leave(_event=None):
+            row.configure(bg=BG_COLOR, fg=TEXT_SECONDARY)
+
+        row.bind("<Button-1>", _on_click)
+        row.bind("<Enter>", _on_enter)
+        row.bind("<Leave>", _on_leave)
 
     # ─── Drag handling ───────────────────────────────────────────────
 
@@ -344,6 +419,18 @@ class OverlayWindow:
         menu.add_command(label="Start Break", command=self._callbacks["start_break"])
         menu.add_command(label="Resume Work", command=self._callbacks["resume"])
         menu.add_command(label="End Break", command=self._callbacks["end_break"])
+        menu.add_separator()
+
+        # Up Next — start a pending task directly from the menu too
+        for task in self._pending_tasks:
+            task_id = task["id"]
+            title = task["title"]
+            label = title[:42] + ("…" if len(title) > 42 else "")
+            menu.add_command(
+                label=f"Start: {label}",
+                command=lambda tid=task_id: self._callbacks["select_task"](tid),
+            )
+
         menu.add_separator()
         menu.add_command(label="Show Main Window", command=self._callbacks["show_main"])
         menu.post(event.x_root, event.y_root)

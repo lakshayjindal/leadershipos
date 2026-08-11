@@ -221,7 +221,10 @@ class LeadershipOSApp:
             self._instance_lock.acquire()
         except InstanceLockError as e:
             logger.warning("Another instance is already running: %s", e)
-            page.window.close()
+            try:
+                page.run_task(page.window.close)
+            except Exception:
+                page.window.close()
             return
 
         # Initialize core services and engines
@@ -256,6 +259,7 @@ class LeadershipOSApp:
                 on_start_break=self._start_break,
                 on_resume=self._resume_from_break,
                 on_end_break=self._end_break,
+                on_select_task=self._on_overlay_select_task,
                 config=self.config.get_section("ui"),
             )
             self._overlay.start()
@@ -634,11 +638,14 @@ class LeadershipOSApp:
                     (tasks[1].title if len(tasks) > 1 else "") if current_task else ""
                 ),
             }
-            # Compute proper next task
+            # Compute proper next task + pending task list for the overlay
             pending = [t for t in tasks if t.status not in (
                 TaskStatus.COMPLETED.value, TaskStatus.ARCHIVED.value, TaskStatus.DELETED.value
             ) and t.id != active_id]
             overlay_data["next_task"] = pending[0].title if pending else ""
+            overlay_data["pending_tasks"] = [
+                {"id": t.id, "title": t.title} for t in pending[:4]
+            ]
             self._overlay.send_update(overlay_data)
 
         # Only rebuild main view when on today view
@@ -1135,9 +1142,16 @@ class LeadershipOSApp:
     # ─── Tray & Window Event Handlers ───────────────────────────────
 
     def _on_tray_show_window(self) -> None:
-        """Show the main window (called from tray)."""
+        """Show the main window (called from tray or overlay)."""
         if self.page and self.page.window:
-            self.page.window.show()
+            # Flet 0.86: no window.show() — use the visible property + update.
+            self.page.window.visible = True
+            self.page.update()
+            # Bring to front (async in Flet 0.86)
+            try:
+                self.page.run_task(self.page.window.to_front)
+            except Exception as e:
+                logger.debug("Could not bring window to front: %s", e)
             # Refresh UI to show current state
             self.switch_to_today()
 
@@ -1146,7 +1160,11 @@ class LeadershipOSApp:
         if self.page and self.page.window:
             # Allow close: disable prevent_close so window actually closes
             self.page.window.prevent_close = False
-            self.page.window.close()
+            # close() is async in Flet 0.86 — must be awaited via run_task.
+            try:
+                self.page.run_task(self.page.window.close)
+            except Exception as e:
+                logger.warning("Error closing window: %s", e)
 
     def _on_tray_pause(self, event: str, data: dict[str, Any]) -> None:
         self._pause_active_task()
@@ -1162,6 +1180,14 @@ class LeadershipOSApp:
 
     def _on_tray_end_break(self, event: str, data: dict[str, Any]) -> None:
         self._end_break()
+
+    def _on_overlay_select_task(self, task_id: str) -> None:
+        """Start a pending task selected from the floating overlay."""
+        logger.info("Overlay task selected: %s", task_id)
+        try:
+            self._activate_task(task_id)
+        except Exception as e:
+            logger.error("Failed to start task from overlay: %s", e)
 
     def _on_config_changed(self, event: str, data: dict[str, Any]) -> None:
         """Reload shortcuts when config changes."""
