@@ -516,3 +516,159 @@ class TestProgressCardPadding:
                     assert padding is not None
                     bottom = padding.bottom if hasattr(padding, "bottom") else padding
                     assert bottom >= 14, "Card should have >=14px bottom padding"
+
+
+# ─── Test 9: Top-bar theme toggle ───────────────────────────────────
+
+
+def _find_icon_button_with_tooltip(control, tooltip: str):
+    """Find the first IconButton whose tooltip contains the given text."""
+    return _find_control(
+        control,
+        lambda c: isinstance(c, ft.IconButton) and tooltip in (c.tooltip or ""),
+    )
+
+
+class TestThemeToggle:
+    """The top bar should expose a quick dark/light toggle button."""
+
+    def _bar(self, current_theme="light", on_toggle=None):
+        from leadership_os.ui.widgets.top_bar import build_top_bar
+
+        return build_top_bar(
+            on_search=lambda: None,
+            on_settings=lambda: None,
+            on_command_palette=lambda: None,
+            on_toggle_theme=on_toggle,
+            current_theme=current_theme,
+        )
+
+    def test_toggle_button_exists(self):
+        bar = self._bar()
+        btn = _find_icon_button_with_tooltip(bar, "Switch to dark mode")
+        assert btn is not None, "Toggle button should exist in top bar"
+
+    def test_light_mode_shows_moon_icon(self):
+        bar = self._bar(current_theme="light")
+        btn = _find_icon_button_with_tooltip(bar, "Switch to dark mode")
+        assert btn is not None
+        assert btn.icon == ft.Icons.DARK_MODE, "Light mode should offer the dark (moon) icon"
+
+    def test_dark_mode_shows_sun_icon(self):
+        bar = self._bar(current_theme="dark")
+        btn = _find_icon_button_with_tooltip(bar, "Switch to light mode")
+        assert btn is not None
+        assert btn.icon == ft.Icons.LIGHT_MODE, "Dark mode should offer the light (sun) icon"
+
+    def test_toggle_callback_fires(self):
+        called: list[bool] = []
+        bar = self._bar(on_toggle=lambda: called.append(True))
+        btn = _find_icon_button_with_tooltip(bar, "Switch to dark mode")
+        assert btn is not None
+        handler = getattr(btn, "on_click", None)
+        assert handler is not None
+        handler(None)
+        assert called == [True], "Toggle callback should fire on click"
+
+    def test_toggle_callback_optional(self):
+        """on_toggle_theme should be optional (backwards compatible)."""
+        bar = self._bar(on_toggle=None)
+        btn = _find_icon_button_with_tooltip(bar, "Switch to dark mode")
+        assert btn is not None
+        handler = getattr(btn, "on_click", None)
+        handler(None)  # must not raise
+
+    def test_nav_icons_visible_on_black_in_both_modes(self):
+        """Nav icons must be light so they read on the black bar in light mode."""
+        from leadership_os.ui.theme import Theme
+
+        bar = self._bar(current_theme="light")
+        search = _find_icon_button_with_tooltip(bar, "Search")
+        assert search is not None
+        assert search.icon_color == Theme.ON_DARK
+
+
+class TestAppThemeToggle:
+    """app._on_toggle_theme should flip the config and re-apply the theme."""
+
+    class FakeConfig:
+        def __init__(self):
+            self.values = {"ui": {"theme": "light"}}
+
+        def get(self, section, key, default=None):
+            return self.values.get(section, {}).get(key, default)
+
+        def set(self, section, key, value):
+            self.values.setdefault(section, {})[key] = value
+
+        def save(self):
+            pass
+
+    class FakeBus:
+        def __init__(self):
+            self.emitted = []
+
+        def emit(self, event, data=None):
+            self.emitted.append((event, data))
+
+    def _make_app(self):
+        from leadership_os.app import LeadershipOSApp
+
+        app = LeadershipOSApp()
+        app.config = self.FakeConfig()
+        app.event_bus = self.FakeBus()
+        app._apply_theme = lambda: None  # type: ignore[method-assign]
+        return app
+
+    def test_toggle_flips_light_to_dark(self):
+        from leadership_os.core.event_bus import CONFIG_CHANGED
+
+        app = self._make_app()
+        app._on_toggle_theme()
+        assert app.config.values["ui"]["theme"] == "dark"
+        assert app.event_bus.emitted == [(CONFIG_CHANGED, {"source": "top_bar"})]
+
+    def test_toggle_flips_dark_back_to_light(self):
+        app = self._make_app()
+        app.config.set("ui", "theme", "dark")
+        app._on_toggle_theme()
+        assert app.config.values["ui"]["theme"] == "light"
+
+    def test_toggle_without_config_is_safe(self):
+        from leadership_os.app import LeadershipOSApp
+
+        app = LeadershipOSApp()  # config is None
+        app._on_toggle_theme()  # should not raise
+
+    def test_apply_theme_rebuilds_top_bar(self):
+        """_apply_theme must swap in a fresh top bar so the toggle icon
+        and nav colors re-resolve after the palette switches."""
+        import flet as ft
+
+        from leadership_os.app import LeadershipOSApp
+
+        app = LeadershipOSApp()
+        app.page = FakePage()
+        app.config = self.FakeConfig()
+        app._root_column = ft.Column(controls=[ft.Text("old top bar")])
+        old = app._root_column.controls[0]
+
+        app._apply_theme()
+
+        new = app._root_column.controls[0]
+        assert new is not old, "_apply_theme should replace the top bar"
+        assert isinstance(new, ft.Container)
+
+    def test_build_top_bar_uses_current_theme(self):
+        """_build_top_bar should reflect the active palette mode."""
+        from leadership_os.app import LeadershipOSApp
+        from leadership_os.ui import theme as theme_mod
+
+        app = LeadershipOSApp()
+        theme_mod.Theme.set_mode("dark")
+        try:
+            bar = app._build_top_bar()
+            btn = _find_icon_button_with_tooltip(bar, "Switch to light mode")
+            assert btn is not None, "Dark mode should show the light-mode toggle"
+        finally:
+            theme_mod.Theme.set_mode("light")

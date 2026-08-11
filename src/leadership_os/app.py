@@ -326,17 +326,23 @@ class LeadershipOSApp:
 
     # ─── UI Building ─────────────────────────────────────────────────
 
+    def _build_top_bar(self) -> ft.Container:
+        """Build the global nav bar with the current theme state."""
+        return build_top_bar(
+            on_search=self.show_search,
+            on_settings=self.switch_to_settings,
+            on_command_palette=self.show_command_palette,
+            on_quit=self._on_quit,
+            on_toggle_theme=self._on_toggle_theme,
+            current_theme=Theme.mode(),
+        )
+
     def _build_ui(self) -> None:
         """Build complete UI layout with Stack for overlay support."""
         self.page.controls.clear()
 
         # Top bar
-        top_bar = build_top_bar(
-            on_search=self.show_search,
-            on_settings=self.switch_to_settings,
-            on_command_palette=self.show_command_palette,
-            on_quit=self._on_quit,
-        )
+        top_bar = self._build_top_bar()
 
         # Main content row
         sidebar = build_sidebar(
@@ -1301,6 +1307,24 @@ class LeadershipOSApp:
         self._apply_theme()
         logger.info("Configuration change detected, shortcuts + theme reloaded")
 
+    def _on_toggle_theme(self) -> None:
+        """Toggle between light and dark theme from the top bar.
+
+        Persists the new mode to config (so it survives restarts and the
+        Settings dropdown stays in sync), then re-applies the theme.
+        """
+        if not self.config:
+            return
+        current = (self.config.get("ui", "theme", "light") or "light").lower()
+        new_theme = "dark" if current != "dark" else "light"
+        self.config.set("ui", "theme", new_theme)
+        self.config.save()
+        logger.info("Theme toggled to %s from top bar", new_theme)
+        if self.event_bus:
+            self.event_bus.emit(CONFIG_CHANGED, {"source": "top_bar"})
+        else:
+            self._on_config_changed(CONFIG_CHANGED, {"source": "top_bar"})
+
     def _apply_theme(self) -> None:
         """Apply the configured theme (light/dark) and rebuild the UI so all
         widget colors re-resolve from the active palette."""
@@ -1311,6 +1335,10 @@ class LeadershipOSApp:
         self.page.theme = build_flet_theme()
         self.page.theme_mode = self._resolve_theme_mode()
         self.page.bgcolor = Theme.PARCHMENT
+
+        # Rebuild the top bar so the toggle icon + nav colors re-resolve.
+        if self._root_column:
+            self._root_column.controls[0] = self._build_top_bar()
 
         # Rebuild the correct center workspace for the current view with the
         # new palette, then refresh chrome (sidebar + panel) and populate data.

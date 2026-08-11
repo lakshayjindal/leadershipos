@@ -1,7 +1,8 @@
 """TopBar — global navigation bar (Flet).
 
 Apple-style global nav: pure-black bar (44px), white nav-link typography,
-right-aligned utility cluster (search, settings, command palette, quit).
+right-aligned utility cluster (search, theme toggle, settings, command
+palette, quit).
 """
 
 from __future__ import annotations
@@ -16,6 +17,8 @@ def build_top_bar(
     on_settings,
     on_command_palette,
     on_quit=None,
+    on_toggle_theme=None,
+    current_theme="light",
 ) -> ft.Container:
     """Build the global navigation bar.
 
@@ -24,6 +27,9 @@ def build_top_bar(
         on_settings: Callback for settings button.
         on_command_palette: Callback for command palette button.
         on_quit: Optional callback that fully quits the application.
+        on_toggle_theme: Optional callback that flips light/dark theme.
+        current_theme: Active theme mode ("light" or "dark") — drives which
+            toggle icon is shown (moon when light, sun when dark).
 
     Returns:
         A Container representing the top bar.
@@ -34,11 +40,19 @@ def build_top_bar(
         return ft.IconButton(
             icon=icon,
             icon_size=15,
-            icon_color=Theme.GRAY_2,
-            hover_color=Theme.ON_DARK,
+            # Icons sit on the pure-black global nav (stable in BOTH modes),
+            # so they must always be light — white nav-link type per DESIGN.md.
+            icon_color=Theme.ON_DARK,
+            hover_color=Theme.GRAY_4,
             tooltip=tooltip,
             on_click=lambda _: callback(),
         )
+
+    # ── Theme toggle — quick dark/light switch without opening Settings ──
+    is_dark = str(current_theme).lower() == "dark"
+    toggle_icon = ft.Icons.LIGHT_MODE if is_dark else ft.Icons.DARK_MODE
+    toggle_tooltip = "Switch to light mode" if is_dark else "Switch to dark mode"
+    toggle_btn = _nav_icon(toggle_icon, toggle_tooltip, on_toggle_theme or (lambda: None))
 
     return ft.Container(
         height=nav_height,
@@ -75,7 +89,7 @@ def build_top_bar(
                 ft.Container(expand=True),
                 # Right utility cluster (nav-link typography, ~20px spacing)
                 ft.Container(
-                    width=250,
+                    width=290,
                     height=nav_height,
                     bgcolor=Theme.BLACK,
                     padding=ft.Padding(8, 0, 8, 0),
@@ -85,6 +99,7 @@ def build_top_bar(
                             _nav_icon(ft.Icons.SEARCH, "Search (Ctrl+K)", on_search),
                             _nav_icon(ft.Icons.SETTINGS, "Settings", on_settings),
                             _nav_icon(ft.Icons.KEYBOARD, "Command palette", on_command_palette),
+                            toggle_btn,
                             ft.Container(width=6),
                             # Quit — actually exits the app (not minimize to tray)
                             ft.Container(
