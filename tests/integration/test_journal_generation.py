@@ -22,15 +22,14 @@ class TestFullJournalWorkflow:
     """Test the complete journal generation workflow from a real day."""
 
     def test_full_day_journal_generation(
-        self, journal_engine, tmp_dir, db, sample_day: Day, task_engine, timer_engine, break_engine
+        self, journal_engine, tmp_dir, db, task_engine, timer_engine, break_engine
     ):
         """Simulate a full day and verify the generated journal."""
         # Override vault path to use temp directory for test isolation
         journal_engine.config.set("journaling", "vault_path", str(tmp_dir))
         journal_engine.config.set("journaling", "journal_dir", "Journals")
 
-        day = sample_day
-        day.date = "2026-07-15"
+        day = db.create_day(Day(date="2026-07-15"))
         day.start_time = datetime.now().isoformat()
         db.update_day(day)
 
@@ -121,16 +120,14 @@ class TestFullJournalWorkflow:
         assert stored.completed == 2
 
     def test_journal_with_incomplete_tasks(
-        self, journal_engine, tmp_dir, db, sample_day: Day, task_engine
+        self, journal_engine, tmp_dir, db, task_engine
     ):
         """Test journal generation when some tasks are incomplete."""
         # Override vault path to use temp directory for test isolation
         journal_engine.config.set("journaling", "vault_path", str(tmp_dir))
         journal_engine.config.set("journaling", "journal_dir", "Journals")
 
-        day = sample_day
-        day.date = "2026-07-15"
-        db.update_day(day)
+        day = db.create_day(Day(date="2026-07-15"))
 
         # Create tasks but don't complete all
         task_a = task_engine.create_task(day.id, "Finished Task", priority=Priority.HIGH.value)
@@ -152,16 +149,14 @@ class TestFullJournalWorkflow:
         assert "## Incomplete" in content
 
     def test_journal_multiple_sessions(
-        self, journal_engine, tmp_dir, db, sample_day: Day, task_engine, timer_engine, break_engine
+        self, journal_engine, tmp_dir, db, task_engine, timer_engine, break_engine
     ):
         """Test journal with multiple work sessions per task."""
         # Override vault path to use temp directory for test isolation
         journal_engine.config.set("journaling", "vault_path", str(tmp_dir))
         journal_engine.config.set("journaling", "journal_dir", "Journals")
 
-        day = sample_day
-        day.date = "2026-07-15"
-        db.update_day(day)
+        day = db.create_day(Day(date="2026-07-15"))
 
         task = task_engine.create_task(day.id, "Interrupted Task", priority=Priority.HIGH.value)
 

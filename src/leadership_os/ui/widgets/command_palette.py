@@ -1,13 +1,14 @@
 """Command Palette — VS Code-style command palette for Leadership OS (Flet).
 
 Provides a floating overlay triggered by Ctrl+K for quick actions:
-- Search across today's tasks
+- Global search across tasks, journals, and sessions (SearchEngine)
 - Quick commands (Start Break, End Review, etc.)
 - Navigation (Settings, History, Today)
-- Fuzzy text matching on task titles
+- Recent searches
+- Fuzzy text matching with term highlighting
 
 Design: Uses a Stack-based overlay that covers the entire app. When visible,
-it captures keyboard focus and provides a filterable list of results.
+it captures keyboard focus and provides a filterable list of grouped results.
 """
 
 from __future__ import annotations
@@ -20,6 +21,13 @@ import flet as ft
 from leadership_os.core.task_engine import TaskEngine
 
 logger = logging.getLogger(__name__)
+
+# Result categories shown as section headers
+_SECTION_LABELS = {
+    "task": "TASKS",
+    "journal": "JOURNAL ENTRIES",
+    "session": "SESSIONS",
+}
 
 
 # ─── Fuzzy matching ───────────────────────────────────────────────────
@@ -48,14 +56,21 @@ def build_command_palette(
     on_search_task,
     on_run_command,
     on_close,
+    search_engine=None,
+    on_open_day=None,
 ) -> ft.Container:
     """Build the command palette overlay.
 
     Args:
-        task_engine: TaskEngine for searching tasks.
+        task_engine: TaskEngine for searching today's tasks (fallback).
         on_search_task: Called with task_id when user selects a task result.
         on_run_command: Called with command_name when user selects a command.
         on_close: Called to close/hide the palette.
+        search_engine: Optional SearchEngine for global grouped search.
+            When provided, results are grouped into Tasks / Journal Entries /
+            Sessions with term highlighting and recent searches.
+        on_open_day: Optional callable accepting a day_id — invoked when a
+            journal entry or session result is selected (navigates to History).
 
     Returns:
         A Container representing the full-screen overlay.
@@ -63,6 +78,8 @@ def build_command_palette(
     input_ref = ft.Ref[ft.TextField]()
     results_ref = ft.Ref[ft.Column]()
     selected_index_ref = [0]  # Mutable list for closure capture
+    clickable_handlers: list = []  # Parallel list of click callbacks
+    row_containers: list = []  # Parallel list of row Containers for highlight updates
 
     # Predefined commands
     commands: list[dict[str, Any]] = [
@@ -74,7 +91,7 @@ def build_command_palette(
         {"icon": "📋", "title": "Go to Today", "action": "goto_today"},
         {"icon": "📚", "title": "Go to History", "action": "goto_history"},
         {"icon": "⚙", "title": "Open Settings", "action": "goto_settings"},
-        {"icon": "🔍", "title": "Search All Tasks", "action": "search"},
+        {"icon": "🔍", "title": "Search All", "action": "search"},
     ]
 
     def _build_result_row(
@@ -83,9 +100,15 @@ def build_command_palette(
         subtitle: str = "",
         on_click=None,
         highlight: bool = False,
+        title_spans: list | None = None,
     ) -> ft.Container:
         """Build a single result row for the palette."""
         bg = "#282850" if highlight else "transparent"
+        title_control = (
+            ft.Text(spans=title_spans, size=13)
+            if title_spans
+            else ft.Text(title, color="#E8E8F0", size=13, weight=ft.FontWeight.W_500)
+        )
         return ft.Container(
             height=40,
             bgcolor=bg,
@@ -101,7 +124,7 @@ def build_command_palette(
                         spacing=0,
                         expand=True,
                         controls=[
-                            ft.Text(title, color="#E8E8F0", size=13, weight=ft.FontWeight.W_500),
+                            title_control,
                             ft.Text(subtitle, color="#5A5A80", size=10) if subtitle else ft.Container(),
                         ],
                     ),
@@ -109,52 +132,137 @@ def build_command_palette(
             ),
         )
 
+    def _section_header(text: str, top_pad: int = 0) -> ft.Container:
+        """Build a section header row."""
+        return ft.Container(
+            padding=ft.Padding(8, top_pad, 8, 0),
+            content=ft.Text(text, color="#747496", size=9, weight=ft.FontWeight.W_700),
+        )
+
+    def _highlight_spans(text: str, query: str) -> list:
+        """Build TextSpans with the query highlighted."""
+        from leadership_os.core.search_engine import highlight_segments
+
+        spans: list[ft.TextSpan] = []
+        for segment, is_match in highlight_segments(text, query):
+            spans.append(ft.TextSpan(
+                segment,
+                style=ft.TextStyle(
+                    color="#7EB3FF" if is_match else "#E8E8F0",
+                    weight=ft.FontWeight.W_700 if is_match else ft.FontWeight.W_500,
+                ),
+            ))
+        return spans
+
+    def _reset_clickable() -> None:
+        clickable_handlers.clear()
+        row_containers.clear()
+
+    def _apply_highlight() -> None:
+        """Update the selected row's background without rebuilding the list."""
+        selected = selected_index_ref[0]
+        for i, container in enumerate(row_containers):
+            container.bgcolor = "#282850" if i == selected else "transparent"
+        if results_ref.current:
+            results_ref.current.update()
+
+    def _add_result_row(icon: str, title: str, subtitle: str, handler, title_spans=None):
+        """Track a clickable row and its container, keeping handler/index aligned."""
+        clickable_handlers.append(handler)
+        row = _build_result_row(
+            icon, title, subtitle,
+            on_click=lambda _, h=handler: h(),
+            highlight=False,
+            title_spans=title_spans,
+        )
+        row_containers.append(row)
+        return row
+
     def _update_results(query: str):
-        """Filter and render results based on the current query."""
+        """Filter and render results based on the current query.
+
+        Selection index is preserved across re-renders; it is only reset
+        here because callers reset it explicitly before re-rendering.
+        """
         if not results_ref.current:
             return
 
+        _reset_clickable()
         results: list[ft.Control] = []
-        idx = 0
-        selected_index_ref[0] = 0
         query_stripped = query.strip()
 
-        # Section: Commands (always shown, filtered by query if non-empty)
+        # ── Recent searches (shown when the query is empty) ─────────
+        if not query_stripped and search_engine is not None:
+            recent = search_engine.get_recent_searches()
+            if recent:
+                results.append(_section_header("RECENT SEARCHES", top_pad=0))
+                for term in recent:
+                    def _fill_recent(t=term):
+                        if input_ref.current:
+                            input_ref.current.value = t
+                            selected_index_ref[0] = 0
+                            _update_results(t)
+                            if input_ref.current:
+                                input_ref.current.focus()
+                    results.append(_add_result_row(
+                        "🕘", term, "Search again", _fill_recent,
+                    ))
+
+        # ── Commands section ────────────────────────────────────────
         command_results: list[ft.Control] = []
         if not query_stripped:
-            # Show all commands when empty
             for cmd in commands:
-                command_results.append(_build_result_row(
-                    cmd["icon"], cmd["title"],
-                    on_click=lambda _, a=cmd["action"]: _dispatch_command(a),
-                    highlight=idx == selected_index_ref[0],
+                command_results.append(_add_result_row(
+                    cmd["icon"], cmd["title"], "",
+                    lambda a=cmd["action"]: _dispatch_command(a),
                 ))
-                idx += 1
         else:
             for cmd in commands:
                 if _fuzzy_match(query_stripped, cmd["title"]):
-                    command_results.append(_build_result_row(
-                        cmd["icon"], cmd["title"],
-                        on_click=lambda _, a=cmd["action"]: _dispatch_command(a),
-                        highlight=idx == selected_index_ref[0],
+                    command_results.append(_add_result_row(
+                        cmd["icon"], cmd["title"], "",
+                        lambda a=cmd["action"]: _dispatch_command(a),
                     ))
-                    idx += 1
 
         if command_results:
-            results.append(
-                ft.Container(
-                    padding=ft.Padding(8, 4, 8, 0),
-                    content=ft.Text("COMMANDS", color="#747496", size=9, weight=ft.FontWeight.W_700),
-                )
-            )
+            results.append(_section_header("COMMANDS", top_pad=0 if not results else 10))
             results.extend(command_results)
 
-        # Section: Tasks (searched from engine)
-        if task_engine and query_stripped:
-            # Get today's tasks
-            # We need a day_id; the caller provides tasks via the task_engine
+        # ── Global search sections (SearchEngine) ───────────────────
+        if query_stripped and search_engine is not None:
             try:
-                # Search all tasks from recent days
+                hits = search_engine.search(query_stripped, limit_per_category=8)
+                # Group by category preserving engine order
+                grouped: dict[str, list] = {}
+                for hit in hits:
+                    grouped.setdefault(hit.category, []).append(hit)
+
+                for category in ("task", "journal", "session"):
+                    category_hits = grouped.get(category, [])
+                    if not category_hits:
+                        continue
+                    label = _SECTION_LABELS.get(category, category.upper())
+                    results.append(_section_header(f"{label} ({len(category_hits)})", top_pad=10))
+                    for hit in category_hits:
+                        icon = {"task": "📋", "journal": "📄", "session": "⏱"}.get(category, "•")
+                        if category == "task":
+                            results.append(_add_result_row(
+                                icon, hit.title, hit.subtitle,
+                                lambda hit_id=hit.id: _dispatch_task(hit_id),
+                                title_spans=_highlight_spans(hit.title, query_stripped),
+                            ))
+                        else:
+                            results.append(_add_result_row(
+                                icon, hit.title, hit.subtitle,
+                                lambda hit_day=hit.day_id: _dispatch_day(hit_day),
+                                title_spans=_highlight_spans(hit.title, query_stripped),
+                            ))
+            except Exception as e:
+                logger.debug("Global search in palette failed: %s", e)
+
+        # ── Fallback: task-only search via task_engine ──────────────
+        if query_stripped and search_engine is None and task_engine:
+            try:
                 from datetime import date
                 today = date.today().isoformat()
                 day = task_engine.db.get_day_by_date(today)  # type: ignore[attr-defined]
@@ -167,19 +275,12 @@ def build_command_palette(
                                 task.priority, "⚪"
                             )
                             status = task.status.replace("_", " ").title()
-                            task_results.append(_build_result_row(
+                            task_results.append(_add_result_row(
                                 priority_icon, task.title, status,
-                                on_click=lambda _, tid=task.id: _dispatch_task(tid),
-                                highlight=idx == selected_index_ref[0],
+                                lambda tid=task.id: _dispatch_task(tid),
                             ))
-                            idx += 1
                     if task_results:
-                        results.append(
-                            ft.Container(
-                                padding=ft.Padding(8, 12 if command_results else 4, 8, 0),
-                                content=ft.Text("TASKS", color="#747496", size=9, weight=ft.FontWeight.W_700),
-                            )
-                        )
+                        results.append(_section_header("TASKS", top_pad=10))
                         results.extend(task_results)
             except Exception as e:
                 logger.debug("Task search in palette failed: %s", e)
@@ -194,67 +295,69 @@ def build_command_palette(
             )
 
         results_ref.current.controls = results
-        results_ref.current.update()
+        selected_index_ref[0] = 0
+        _apply_highlight()
 
     def _dispatch_command(action: str):
         """Dispatch a command action and close the palette."""
-        if action == "goto_today" or action == "goto_history" or action == "goto_settings":
-            on_run_command(action)
-        else:
-            on_run_command(action)
+        if search_engine is not None and input_ref.current and input_ref.current.value:
+            search_engine.add_recent_search(input_ref.current.value)
+        on_run_command(action)
         on_close()
 
     def _dispatch_task(task_id: str):
         """Dispatch a task selection and close the palette."""
+        if search_engine is not None and input_ref.current and input_ref.current.value:
+            search_engine.add_recent_search(input_ref.current.value)
         on_search_task(task_id)
+        on_close()
+
+    def _dispatch_day(day_id: str):
+        """Open a journal/session result by navigating to its day."""
+        if search_engine is not None and input_ref.current and input_ref.current.value:
+            search_engine.add_recent_search(input_ref.current.value)
+        if on_open_day:
+            on_open_day(day_id)
         on_close()
 
     def _on_input_change(e: ft.ControlEvent):
         _update_results(e.control.value if e.control.value else "")
 
-    def _on_input_submit(e: ft.ControlEvent):
-        """On Enter, select the highlighted result."""
-        if results_ref.current and results_ref.current.controls:
-            idx = selected_index_ref[0]
-            if idx < len(results_ref.current.controls):
-                ctrl = results_ref.current.controls[idx]
-                # Find the clickable container (skip section headers)
-                if hasattr(ctrl, "content") and hasattr(ctrl, "on_click"):
-                    handler = ctrl.on_click  # type: ignore[assignment]
-                    if handler:
-                        handler(None)
+    def _on_key(e: ft.KeyboardEvent) -> bool:
+        """Handle keyboard navigation within the palette.
 
-    def _on_key(e: ft.KeyboardEvent, parent_handler):
-        """Handle keyboard navigation within the palette."""
+        Flet 0.86 only supports on_keyboard_event at the Page level, so the
+        app wires this handler into the page's combined keyboard handler.
+
+        Returns True if the key was consumed by the palette.
+        """
         if e.key == "Arrow Down" or e.key == "Arrow Up":
-            if not results_ref.current or not results_ref.current.controls:
-                return
-            # Find clickable items count
-            clickable = [
-                c for c in results_ref.current.controls
-                if hasattr(c, "on_click") and c.on_click is not None
-            ]
-            total = len(clickable)
-            if total == 0:
-                return
-            if e.key == "Arrow Down":
-                selected_index_ref[0] = (selected_index_ref[0] + 1) % total
-            else:
-                selected_index_ref[0] = (selected_index_ref[0] - 1) % total
-
-            # Re-render with new highlight
-            query = input_ref.current.value if input_ref.current else ""
-            _update_results(query)
+            total = len(clickable_handlers)
+            if total > 0:
+                if e.key == "Arrow Down":
+                    selected_index_ref[0] = (selected_index_ref[0] + 1) % total
+                else:
+                    selected_index_ref[0] = (selected_index_ref[0] - 1) % total
+                _apply_highlight()
+            # Always consume arrows while the palette is visible so they
+            # never fall through to task-list navigation behind the overlay.
+            return True
+        elif e.key == "Enter":
+            if clickable_handlers:
+                idx = selected_index_ref[0]
+                if 0 <= idx < len(clickable_handlers):
+                    clickable_handlers[idx]()
+            # Always consume Enter while the palette is visible.
+            return True
         elif e.key == "Escape":
             on_close()
-        elif parent_handler:
-            # Pass through to the parent handler for non-navigation keys
-            pass
+            return True
+        return False
 
     # ── Build the palette ───────────────────────────────────────────
 
     palette_card = ft.Container(
-        width=520,
+        width=560,
         bgcolor="#1A1A2E",
         border_radius=12,
         border=ft.Border.all(1, "#2D2D4A40"),
@@ -268,19 +371,18 @@ def build_command_palette(
                     border=ft.Border(bottom=ft.BorderSide(1, "#2D2D4A30")),
                     content=ft.TextField(
                         ref=input_ref,
-                        hint_text="Search commands, tasks...",
+                        hint_text="Search tasks, journals, sessions, commands...",
                         border=ft.InputBorder.NONE,
                         autofocus=True,
                         text_size=16,
                         color="#E8E8F0",
                         hint_style=ft.TextStyle(color="#747496", size=16),
                         on_change=_on_input_change,
-                        on_submit=_on_input_submit,
                     ),
                 ),
                 # Results list
                 ft.Container(
-                    height=340,
+                    height=360,
                     padding=ft.Padding(8, 8, 8, 8),
                     content=ft.Column(
                         ref=results_ref,
@@ -315,5 +417,9 @@ def build_command_palette(
 
     # Prevent click on palette card from closing
     palette_card.on_click = lambda _: None  # type: ignore[method-assign]
+
+    # Expose the keyboard handler so the page-level combined handler can
+    # delegate arrow/enter/escape keys to the palette when it is visible.
+    overlay._lhos_handle_keyboard = _on_key  # type: ignore[attr-defined]
 
     return overlay

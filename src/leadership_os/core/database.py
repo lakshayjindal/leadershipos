@@ -140,6 +140,25 @@ class Database:
         day = db.get_or_create_today()
     """
 
+    # Column name sets for merging joined rows in search queries
+    _DAY_COLUMNS = frozenset({"id", "date", "start_time", "end_time", "status", "created_at", "updated_at"})
+    _TASK_COLUMNS = frozenset({
+        "id", "day_id", "title", "description", "priority", "status", "deadline",
+        "estimated_minutes", "actual_seconds", "created_at", "activated_at",
+        "completed_at", "display_order", "notes",
+    })
+    _SESSION_COLUMNS = frozenset({"id", "task_id", "start_time", "end_time", "duration_seconds", "created_at"})
+    _BREAK_COLUMNS = frozenset({"id", "day_id", "break_type", "start_time", "end_time", "duration_seconds", "notes"})
+    _REFLECTION_COLUMNS = frozenset({
+        "id", "day_id", "accomplishments", "challenges", "tomorrow_first",
+        "additional_notes", "created_at",
+    })
+    _SUMMARY_COLUMNS = frozenset({
+        "id", "day_id", "total_planned", "completed", "carried_forward", "archived",
+        "deleted", "total_focus_seconds", "total_break_seconds", "completion_percentage",
+        "longest_session_seconds", "session_count", "journal_rel_path", "generated_at",
+    })
+
     def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
         self._conn: sqlite3.Connection | None = None
@@ -499,6 +518,188 @@ class Database:
             cursor.execute("SELECT * FROM break_sessions WHERE id = ?", (break_id,))
             row = cursor.fetchone()
             return self._row_to_break_session(row) if row else None
+
+    # ─── Search Operations ────────────────────────────────────────────
+
+    # Alias scheme for day columns in joined search queries: prefix "d__"
+    # avoids collisions with identically-named task/session columns.
+    _DAY_ALIASES: dict[str, str] = {
+        "d__id": "id",
+        "d__date": "date",
+        "d__start_time": "start_time",
+        "d__end_time": "end_time",
+        "d__status": "status",
+        "d__created_at": "created_at",
+        "d__updated_at": "updated_at",
+    }
+
+    _DAY_ALIAS_SQL = ", ".join(
+        f"d.{col} AS {alias}" for alias, col in _DAY_ALIASES.items()
+    )
+
+    @staticmethod
+    def _like_pattern(term: str) -> str:
+        """Escape LIKE wildcards and wrap a term in % for substring matching."""
+        escaped = (
+            term.replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+        )
+        return f"%{escaped}%"
+
+    def _day_from_row(self, row: sqlite3.Row) -> Day:
+        """Extract the day from an aliased joined search row."""
+        return self._row_to_day({
+            col: row[alias] for alias, col in self._DAY_ALIASES.items()
+        })
+
+    def search_tasks(
+        self, term: str, limit: int = 50
+    ) -> list[tuple[Task, Day]]:
+        """Search tasks by title, description, or notes, joined with their day.
+
+        Returns a list of (Task, Day) tuples ordered by day recency then
+        display order. Case-insensitive substring matching.
+        """
+        pattern = self._like_pattern(term)
+        with self._cursor() as cursor:
+            cursor.execute(
+                f"""SELECT t.*, {self._DAY_ALIAS_SQL} FROM tasks t
+                   JOIN days d ON t.day_id = d.id
+                   WHERE t.title LIKE ? ESCAPE '\\'
+                      OR t.description LIKE ? ESCAPE '\\'
+                      OR t.notes LIKE ? ESCAPE '\\'
+                   ORDER BY d.date DESC, t.display_order ASC
+                   LIMIT ?""",
+                (pattern, pattern, pattern, limit),
+            )
+            rows = cursor.fetchall()
+        return [
+            (self._row_to_task(row), self._day_from_row(row))
+            for row in rows
+        ]
+
+    def search_reflections(
+        self, term: str, limit: int = 50
+    ) -> list[tuple[Reflection, Day, DailySummary | None]]:
+        """Search reflections by their content, joined with day and summary.
+
+        Returns (Reflection, Day, DailySummary) tuples for reflections whose
+        accomplishments, challenges, tomorrow_first, or additional_notes
+        contain the term.
+        """
+        pattern = self._like_pattern(term)
+        with self._cursor() as cursor:
+            cursor.execute(
+                f"""SELECT r.*, {self._DAY_ALIAS_SQL},
+                          s.id AS s_id, s.total_planned AS s_total_planned,
+                          s.completed AS s_completed,
+                          s.carried_forward AS s_carried_forward,
+                          s.archived AS s_archived, s.deleted AS s_deleted,
+                          s.total_focus_seconds AS s_total_focus_seconds,
+                          s.total_break_seconds AS s_total_break_seconds,
+                          s.completion_percentage AS s_completion_percentage,
+                          s.longest_session_seconds AS s_longest_session_seconds,
+                          s.session_count AS s_session_count,
+                          s.journal_rel_path AS s_journal_rel_path,
+                          s.generated_at AS s_generated_at
+                   FROM reflections r
+                   JOIN days d ON r.day_id = d.id
+                   LEFT JOIN daily_summaries s ON s.day_id = r.day_id
+                   WHERE r.accomplishments LIKE ? ESCAPE '\\'
+                      OR r.challenges LIKE ? ESCAPE '\\'
+                      OR r.tomorrow_first LIKE ? ESCAPE '\\'
+                      OR r.additional_notes LIKE ? ESCAPE '\\'
+                   ORDER BY d.date DESC
+                   LIMIT ?""",
+                (pattern, pattern, pattern, pattern, limit),
+            )
+            rows = cursor.fetchall()
+
+        results: list[tuple[Reflection, Day, DailySummary | None]] = []
+        for row in rows:
+            reflection = self._row_to_reflection(row)
+            day = self._day_from_row(row)
+            summary = None
+            if row["s_id"] is not None:
+                summary = DailySummary(
+                    id=row["s_id"],
+                    day_id=row["day_id"],
+                    total_planned=row["s_total_planned"],
+                    completed=row["s_completed"],
+                    carried_forward=row["s_carried_forward"],
+                    archived=row["s_archived"],
+                    deleted=row["s_deleted"],
+                    total_focus_seconds=row["s_total_focus_seconds"],
+                    total_break_seconds=row["s_total_break_seconds"],
+                    completion_percentage=row["s_completion_percentage"],
+                    longest_session_seconds=row["s_longest_session_seconds"],
+                    session_count=row["s_session_count"],
+                    journal_rel_path=row["s_journal_rel_path"],
+                    generated_at=row["s_generated_at"],
+                )
+            results.append((reflection, day, summary))
+        return results
+
+    def search_work_sessions(
+        self, term: str, limit: int = 50
+    ) -> list[tuple[WorkSession, Task, Day]]:
+        """Search work sessions by their task's title or description.
+
+        Returns (WorkSession, Task, Day) tuples ordered by recency.
+        """
+        pattern = self._like_pattern(term)
+        with self._cursor() as cursor:
+            cursor.execute(
+                f"""SELECT ws.id AS ws__id, ws.task_id AS ws__task_id,
+                          ws.start_time AS ws__start_time, ws.end_time AS ws__end_time,
+                          ws.duration_seconds AS ws__duration_seconds,
+                          ws.created_at AS ws__created_at,
+                          t.*, {self._DAY_ALIAS_SQL}
+                   FROM work_sessions ws
+                   JOIN tasks t ON ws.task_id = t.id
+                   JOIN days d ON t.day_id = d.id
+                   WHERE t.title LIKE ? ESCAPE '\\'
+                      OR t.description LIKE ? ESCAPE '\\'
+                   ORDER BY ws.start_time DESC
+                   LIMIT ?""",
+                (pattern, pattern, limit),
+            )
+            rows = cursor.fetchall()
+
+        results: list[tuple[WorkSession, Task, Day]] = []
+        for row in rows:
+            session = WorkSession(
+                id=row["ws__id"],
+                task_id=row["ws__task_id"],
+                start_time=row["ws__start_time"],
+                end_time=row["ws__end_time"],
+                duration_seconds=row["ws__duration_seconds"],
+                created_at=row["ws__created_at"],
+            )
+            results.append((session, self._row_to_task(row), self._day_from_row(row)))
+        return results
+
+    def search_break_sessions(
+        self, term: str, limit: int = 50
+    ) -> list[tuple[BreakSession, Day]]:
+        """Search break sessions by break type or notes."""
+        pattern = self._like_pattern(term)
+        with self._cursor() as cursor:
+            cursor.execute(
+                f"""SELECT b.*, {self._DAY_ALIAS_SQL} FROM break_sessions b
+                   JOIN days d ON b.day_id = d.id
+                   WHERE b.break_type LIKE ? ESCAPE '\\'
+                      OR b.notes LIKE ? ESCAPE '\\'
+                   ORDER BY b.start_time DESC
+                   LIMIT ?""",
+                (pattern, pattern, limit),
+            )
+            rows = cursor.fetchall()
+        return [
+            (self._row_to_break_session(row), self._day_from_row(row))
+            for row in rows
+        ]
 
     # ─── Reflection Operations ────────────────────────────────────────
 

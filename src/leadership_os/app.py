@@ -85,6 +85,7 @@ class LeadershipOSApp:
         self.break_engine = None
         self.journal_engine = None
         self.recovery_mgr = None
+        self.search_engine = None
 
         # Runtime state
         self.page: ft.Page | None = None
@@ -106,6 +107,7 @@ class LeadershipOSApp:
         self._root_column = None  # ft.Column root of page
         self._main_row = None  # ft.Row with [sidebar, center, panel]
         self._status_bar = None  # ft.Container for status bar
+        self._history_container = None  # Last-built history screen container
         self._center_ref = ft.Ref[ft.Container]()  # Ref to center workspace container
         self._overlay_ref = ft.Ref[ft.Container]()  # Ref to command palette overlay
 
@@ -166,6 +168,9 @@ class LeadershipOSApp:
         self.break_engine = BreakEngine(self.db, self.event_bus, self.state, self.task_engine)
         self.journal_engine = JournalEngine(self.db, self.event_bus, self.config)
         self.recovery_mgr = RecoveryManager(self.db, self.state, self.event_bus)
+
+        from leadership_os.core.search_engine import SearchEngine
+        self.search_engine = SearchEngine(self.db, self.config)
 
         logger.info("All engines initialized")
         self._initialized = True
@@ -275,7 +280,14 @@ class LeadershipOSApp:
         shortcut_handle = self._shortcut_handler.handle
 
         def _combined_keyboard_handler(e: ft.KeyboardEvent) -> bool:
-            # Check for task list navigation keys first
+            # Command palette gets first dibs when visible (global search nav)
+            if self._overlay_ref.current and self._overlay_ref.current.visible:
+                palette_handler = getattr(
+                    self._overlay_ref.current.content, "_lhos_handle_keyboard", None
+                )
+                if palette_handler and palette_handler(e):
+                    return True
+            # Check for task list navigation keys next
             if self._on_task_list_keyboard(e):
                 return True
             # Then delegate to shortcut handler
@@ -1026,6 +1038,7 @@ class LeadershipOSApp:
             return
         from leadership_os.ui.widgets.history_screen import build_history_screen, init_history_list
         history = build_history_screen(self.db, on_close=self.switch_to_today)
+        self._history_container = history
         self._main_row.controls[1] = history
         if self.page:
             self.page.update()
@@ -1103,6 +1116,8 @@ class LeadershipOSApp:
             on_search_task=self._on_palette_task_selected,
             on_run_command=self._on_palette_command,
             on_close=self._hide_command_palette,
+            search_engine=self.search_engine,
+            on_open_day=self._on_palette_open_day,
         )
         # Replace overlay content
         parent = self._overlay_ref.current
@@ -1160,6 +1175,22 @@ class LeadershipOSApp:
         """A task was selected in the command palette."""
         self.switch_to_today()
         self._activate_task(task_id)
+
+    def _on_palette_open_day(self, day_id: str) -> None:
+        """Open a journal/session result — navigate to History and select the day."""
+        self.switch_to_history()
+
+        async def _select() -> None:
+            history = getattr(self, "_history_container", None)
+            select_day = getattr(history, "_lhos_select_day", None)
+            if select_day is not None:
+                try:
+                    select_day(day_id)
+                except Exception as e:
+                    logger.debug("Could not select day %s in history: %s", day_id, e)
+
+        if self.page:
+            self.page.run_task(_select)
 
     def _on_palette_command(self, command: str) -> None:
         """A command was selected in the command palette."""

@@ -54,6 +54,11 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "minimize_to_tray": True,
         "open_overlay_on_start": True,
     },
+    "search": {
+        "recent_searches": [],
+        "max_recent_searches": 10,
+        "highlight_matches": True,
+    },
 }
 
 
