@@ -354,7 +354,7 @@ class TestSidebarHighlight:
         from leadership_os.ui.theme import Theme
 
         sidebar = self._sidebar("today")
-        assert _nav_item_bg(sidebar, "Today") == Theme.PARCHMENT
+        assert _nav_item_bg(sidebar, "Today") == Theme.PEARL
         assert _nav_item_bg(sidebar, "History") == "transparent"
         assert _nav_item_bg(sidebar, "Settings") == "transparent"
 
@@ -362,14 +362,14 @@ class TestSidebarHighlight:
         from leadership_os.ui.theme import Theme
 
         sidebar = self._sidebar("history")
-        assert _nav_item_bg(sidebar, "History") == Theme.PARCHMENT
+        assert _nav_item_bg(sidebar, "History") == Theme.PEARL
         assert _nav_item_bg(sidebar, "Today") == "transparent"
 
     def test_settings_highlighted(self):
         from leadership_os.ui.theme import Theme
 
         sidebar = self._sidebar("settings")
-        assert _nav_item_bg(sidebar, "Settings") == Theme.PARCHMENT
+        assert _nav_item_bg(sidebar, "Settings") == Theme.PEARL
         assert _nav_item_bg(sidebar, "Today") == "transparent"
 
     def test_today_context_views_keep_today_highlighted(self):
@@ -377,7 +377,7 @@ class TestSidebarHighlight:
 
         for view in ("review", "carry_forward", "break_dialog"):
             sidebar = self._sidebar(view)
-            assert _nav_item_bg(sidebar, "Today") == Theme.PARCHMENT, view
+            assert _nav_item_bg(sidebar, "Today") == Theme.PEARL, view
             assert _nav_item_bg(sidebar, "History") == "transparent", view
             assert _nav_item_bg(sidebar, "Settings") == "transparent", view
 
@@ -392,6 +392,53 @@ class TestSidebarHighlight:
         assert app._nav_view == "settings"
         app.switch_to_today()
         assert app._nav_view == "today"
+
+
+class TestSidebarTheme:
+    """The sidebar shell must follow the active theme (regression: it used
+    Theme.INK as its background, which is WHITE in dark mode)."""
+
+    def _sidebar(self):
+        from leadership_os.ui.widgets.sidebar import build_sidebar
+
+        return build_sidebar(
+            app_state="planning",
+            focus_time=0,
+            completed_count=0,
+            total_count=0,
+            status_text="Ready",
+            active_view="today",
+            today_callback=lambda: None,
+            history_callback=lambda: None,
+            settings_callback=lambda: None,
+        )
+
+    def test_light_mode_sidebar_is_parchment(self):
+        from leadership_os.ui import theme as theme_mod
+
+        theme_mod.Theme.set_mode("light")
+        try:
+            sidebar = self._sidebar()
+            assert sidebar.bgcolor == theme_mod.Theme.PARCHMENT
+            assert sidebar.bgcolor == "#f5f5f7"
+            assert _nav_item_bg(sidebar, "Today") == theme_mod.Theme.PEARL
+        finally:
+            theme_mod.Theme.set_mode("light")
+
+    def test_dark_mode_sidebar_is_black_not_white(self):
+        """Regression: the sidebar background used Theme.INK, which is white
+        (#f5f5f7) in dark mode — the app looked half-light."""
+        from leadership_os.ui import theme as theme_mod
+
+        theme_mod.Theme.set_mode("dark")
+        try:
+            sidebar = self._sidebar()
+            assert sidebar.bgcolor == "#000000", "Sidebar must be black in dark mode"
+            assert sidebar.bgcolor != "#f5f5f7", "Sidebar must not be white in dark mode"
+            # Active pill must stay visible on the black shell
+            assert _nav_item_bg(sidebar, "Today") == "#2c2c2e"
+        finally:
+            theme_mod.Theme.set_mode("light")
 
 
 # ─── Test 7: Dark mode switch ───────────────────────────────────────
@@ -658,6 +705,33 @@ class TestAppThemeToggle:
         new = app._root_column.controls[0]
         assert new is not old, "_apply_theme should replace the top bar"
         assert isinstance(new, ft.Container)
+
+    def test_single_toggle_applies_dark_theme_end_to_end(self):
+        """One click must flip config AND fully re-theme via the real
+        event-bus chain (regression: theme seemed to need two changes)."""
+        import flet as ft
+
+        from leadership_os.app import LeadershipOSApp
+        from leadership_os.core.event_bus import CONFIG_CHANGED, EventBus
+        from leadership_os.ui import theme as theme_mod
+
+        app = LeadershipOSApp()
+        app.page = FakePage()
+        app.config = self.FakeConfig()  # theme: light
+        app.event_bus = EventBus()
+        app.event_bus.subscribe(CONFIG_CHANGED, app._on_config_changed)
+        app._root_column = ft.Column(controls=[ft.Text("old top bar")])
+
+        app._on_toggle_theme()  # ONE click
+
+        try:
+            assert app.config.values["ui"]["theme"] == "dark"
+            assert theme_mod.Theme.mode() == "dark"
+            assert app.page.theme_mode == ft.ThemeMode.DARK
+            # Top bar was rebuilt with the dark palette
+            assert isinstance(app._root_column.controls[0], ft.Container)
+        finally:
+            theme_mod.Theme.set_mode("light")
 
     def test_build_top_bar_uses_current_theme(self):
         """_build_top_bar should reflect the active palette mode."""

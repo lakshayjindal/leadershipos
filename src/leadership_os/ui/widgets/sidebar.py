@@ -1,8 +1,9 @@
 """Sidebar — left navigation panel (Flet).
 
 Provides primary navigation between Today, History, and Settings contexts.
-Apple-style light surface: white sidebar with hairline right border,
-ink text, Action Blue active states, pearl stat cards.
+Apple-style surface that follows the active theme: parchment canvas (pure
+black in dark mode) with a hairline right border, ink text, Action Blue
+active states, and pearl stat cards.
 """
 
 from __future__ import annotations
@@ -24,7 +25,9 @@ def build_nav_item(
     on_click,
 ) -> ft.Container:
     """Build a single navigation item."""
-    bg = Theme.PARCHMENT if active else "transparent"
+    # Active pill is PEARL (the design-doc "button on parchment" fill) so it
+    # reads on the parchment/black sidebar in BOTH modes.
+    bg = Theme.PEARL if active else "transparent"
     text_color = Theme.INK if active else Theme.GRAY_2
     icon_color = Theme.PRIMARY if active else Theme.GRAY_3
 
@@ -98,7 +101,8 @@ def build_sidebar(
 
     return ft.Container(
         width=SIDEBAR_WIDTH,
-        bgcolor=Theme.INK,
+        bgcolor=Theme.PARCHMENT,
+        border=ft.Border(right=ft.BorderSide(1, Theme.HAIRLINE)),
         padding=ft.Padding(8, 12, 8, 8),
         content=ft.Column(
             spacing=2,

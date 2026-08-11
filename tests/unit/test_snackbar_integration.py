@@ -11,9 +11,7 @@ Because these tests were missing, runtime errors like:
 
 from __future__ import annotations
 
-import pytest
 import flet as ft
-
 
 # ─── Helper: Fake Page for testing SnackBar calls ────────────────────
 
@@ -46,13 +44,14 @@ class TestSettingsScreenSnackBar:
 
     def test_on_save_snackbar_uses_correct_api(self):
         """on_save should set page.snack_bar and page.snack_bar.open, not call missing methods."""
-        from leadership_os.ui.widgets.settings_screen import build_settings_screen
-        from leadership_os.config.config_manager import ConfigManager
-        from leadership_os.core.event_bus import EventBus
 
         # Setup
-        import tempfile, os
+        import tempfile
         from pathlib import Path
+
+        from leadership_os.config.config_manager import ConfigManager
+        from leadership_os.core.event_bus import EventBus
+        from leadership_os.ui.widgets.settings_screen import build_settings_screen
         tmpdir = tempfile.mkdtemp()
         config_path = Path(tmpdir) / "config.toml"
         config = ConfigManager(config_path)
@@ -62,11 +61,13 @@ class TestSettingsScreenSnackBar:
         fake_page = FakePage()
         close_called: list[bool] = []
 
-        # Build the settings screen
+        # Build the settings screen — page is injected so the save snackbar
+        # never depends on e.page (which detaches after CONFIG_CHANGED rebuilds)
         widget = build_settings_screen(
             config=config,
             event_bus=event_bus,
             on_close=lambda: close_called.append(True),
+            page=fake_page,
         )
 
         assert widget is not None
@@ -96,11 +97,12 @@ class TestSettingsScreenSnackBar:
 
     def test_all_settings_tabs_render(self):
         """Every settings tab should render without errors."""
-        from leadership_os.ui.widgets.settings_screen import build_settings_screen
+        import tempfile
+        from pathlib import Path
+
         from leadership_os.config.config_manager import ConfigManager
         from leadership_os.core.event_bus import EventBus
-        import tempfile, os
-        from pathlib import Path
+        from leadership_os.ui.widgets.settings_screen import build_settings_screen
 
         tmpdir = tempfile.mkdtemp()
         config_path = Path(tmpdir) / "config.toml"
@@ -156,7 +158,9 @@ class TestCarryForwardBuilding:
 
     def test_empty_list_renders(self):
         """Empty task list should render 'no unfinished tasks'."""
-        from leadership_os.ui.widgets.carry_forward_dialog import build_carry_forward_dialog
+        from leadership_os.ui.widgets.carry_forward_dialog import (
+            build_carry_forward_dialog,
+        )
 
         widget = build_carry_forward_dialog(
             tasks=[],
@@ -170,7 +174,9 @@ class TestCarryForwardBuilding:
     def test_with_tasks_renders(self):
         """Should render tasks with action buttons."""
         from leadership_os.core.models import Task
-        from leadership_os.ui.widgets.carry_forward_dialog import build_carry_forward_dialog
+        from leadership_os.ui.widgets.carry_forward_dialog import (
+            build_carry_forward_dialog,
+        )
 
         task = Task(id="t1", day_id="d1", title="Test Task", priority="high", status="pending")
         widget = build_carry_forward_dialog(
@@ -201,8 +207,8 @@ class TestBreakDialogBuilding:
 
     def test_break_options_are_valid(self):
         """All BREAK_OPTIONS should use valid BreakType values."""
-        from leadership_os.ui.widgets.break_dialog import BREAK_OPTIONS
         from leadership_os.core.enums import BreakType
+        from leadership_os.ui.widgets.break_dialog import BREAK_OPTIONS
 
         valid = {e.value for e in BreakType}
         for opt in BREAK_OPTIONS:
@@ -326,16 +332,15 @@ class TestAllWidgetsImport:
 
 def _find_button_by_text(container, label: str):
     """Walk a Flet widget tree to find a Button with given text."""
-    if isinstance(container, ft.Button):
-        if hasattr(container, "content") and container.content:
-            c = container.content
-            if isinstance(c, ft.Text) and c.value == label:
-                return container
-            # Check for Column/Row wrapping
-            if hasattr(c, "controls"):
-                for child in c.controls:
-                    if isinstance(child, ft.Text) and child.value == label:
-                        return container
+    if isinstance(container, ft.Button) and hasattr(container, "content") and container.content:
+        c = container.content
+        if isinstance(c, ft.Text) and c.value == label:
+            return container
+        # Check for Column/Row wrapping
+        if hasattr(c, "controls"):
+            for child in c.controls:
+                if isinstance(child, ft.Text) and child.value == label:
+                    return container
     if hasattr(container, "content") and container.content:
         result = _find_button_by_text(container.content, label)
         if result:

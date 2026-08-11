@@ -1127,7 +1127,10 @@ class LeadershipOSApp:
             return
         from leadership_os.ui.widgets.settings_screen import build_settings_screen
         settings = build_settings_screen(
-            self.config, self.event_bus, on_close=self.switch_to_today
+            self.config,
+            self.event_bus,
+            on_close=self.switch_to_today,
+            page=self.page,
         )
         self._main_row.controls[1] = settings
         if self.page:

@@ -64,6 +64,7 @@ def build_settings_screen(
     config: ConfigManager,
     event_bus: EventBus,
     on_close,
+    page: ft.Page | None = None,
 ) -> ft.Container:
     """Build the full settings screen.
 
@@ -71,6 +72,11 @@ def build_settings_screen(
         config: ConfigManager instance for read/write.
         event_bus: EventBus to emit CONFIG_CHANGED on save.
         on_close: Callback to return to the main view.
+        page: Optional Page reference used for the save snackbar. Must be
+            passed instead of using ``e.page`` — emitting CONFIG_CHANGED
+            synchronously rebuilds this screen (detaching the clicked
+            button), so touching ``e.page`` afterwards raises
+            ``RuntimeError: Control must be added to the page first``.
 
     Returns:
         A Container containing the complete settings screen.
@@ -156,15 +162,18 @@ def build_settings_screen(
         config.save()
         event_bus.emit(CONFIG_CHANGED, {"source": "settings_screen"})
 
-        # Show brief snackbar
-        if e.page:
-            e.page.snack_bar = ft.SnackBar(
+        # Show brief snackbar. Use the injected page (NOT e.page): the
+        # CONFIG_CHANGED emit above synchronously triggers _apply_theme,
+        # which rebuilds this screen and detaches e.control from the tree,
+        # so touching e.page here raises RuntimeError.
+        if page:
+            page.snack_bar = ft.SnackBar(
                 content=ft.Text("Settings saved", color="white", size=13),
                 bgcolor=Theme.color("success"),
                 duration=2000,
             )
-            e.page.snack_bar.open = True
-            e.page.update()
+            page.snack_bar.open = True
+            page.update()
 
     def on_reset(e):
         """Reset all settings to defaults."""
